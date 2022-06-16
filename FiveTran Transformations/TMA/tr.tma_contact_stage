@@ -176,7 +176,7 @@ USING(
         WHEN [created_date] IS NULL
         THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
         ELSE CAST([created_date] as datetime2)
-        END as [created_date],
+        END as [account_created_date],
 
         CASE
         WHEN [billing_street] IS NULL
