@@ -198,30 +198,30 @@ USING(
       NULL as [address_line_3],
 
 			/*CASE
-        WHEN [place_name] IS NULL
+        WHEN [global_city] IS NULL
           AND [insert_city] IS NOT NULL
         THEN CAST([insert_city] as varchar(max))
-        WHEN [place_name] IS NULL
+        WHEN [global_city] IS NULL
           AND [insert_city] IS NULL
         THEN NULL
-        ELSE CAST([place_name] as varchar(max))
+        ELSE CAST([global_city] as varchar(max))
       END*/
       NULL as [city],
 
       CASE
-        WHEN [admin_name_2] IS NULL
+        WHEN [global_county] IS NULL
         THEN NULL
-        ELSE CAST([admin_name_2] as varchar(max))
+        ELSE CAST([global_county] as varchar(max))
       END as [county],
 
       /*CASE
-        WHEN [admin_code_1] IS NULL
+        WHEN [global_state] IS NULL
           AND [insert_state] IS NOT NULL
         THEN CAST([insert_state] as varchar(max))
-        WHEN [admin_code_1] IS NULL
+        WHEN [global_state] IS NULL
           AND [insert_state] IS NULL
         THEN NULL
-        ELSE CAST([admin_code_1] as varchar(max))
+        ELSE CAST([global_state] as varchar(max))
       END*/
       NULL as [state],
 
@@ -244,9 +244,9 @@ USING(
       NULL as [country],
 
       CASE
-        WHEN [admin_name_2] IS NULL
+        WHEN [global_dma] IS NULL
         THEN NULL
-        ELSE CAST([admin_name_2] as varchar(max))
+        ELSE CAST([global_dma] as varchar(max))
       END as [dma],
 
       CASE
@@ -535,16 +535,32 @@ USING(
 /*joins standardized address information on zip codes*/
 
    LEFT JOIN (
-    SELECT DISTINCT
-        CAST(postal_code as varchar(max)) as postal_code,
-        country_code,
-        place_name,
-        admin_code_1,
-        admin_name_2,
-        latitude,
-        longitude
+   SELECT
+          [country_code]
+         ,[postal_code]
+         ,[place_name] as [global_city]
+         ,[admin_code_1] as [global_state]
+         ,[admin_name_2] as [global_county]
+         ,[latitude]
+         ,[longitude]
+         ,[gccsa_name_2016] as [global_dma]
+   	     ,ROW_NUMBER() OVER (PARTITION BY postal_code ORDER BY country_code ASC) as row_id
     FROM [Dunham].[geo].[geonames_postal_code_all]
-   ) geo on geo.[postal_code] = c.[insert_postal]
+    LEFT JOIN (
+    SELECT
+          f.value as [AUS City]
+          ,[state_code_2016] as [AUS State]
+          ,[gccsa_name_2016] as [AUS DMA]
+      FROM [Dunham].[geo].[sa_3_2016_aust]
+      CROSS APPLY STRING_SPLIT([sa_3_name_2016],' ') as f
+      where charindex('(',[sa_3_name_2016])=0
+      AND (f.value <> '-'
+        AND f.value <> 'North'
+        AND f.value <> 'South' 
+        AND f.value <> 'East'
+        AND f.value <> 'West')
+    ) aus ON (aus.[AUS City] = [place_name] AND aus.[AUS State]=[admin_code_1])
+   ) geo on geo.[postal_code] = c.[insert_postal] collate SQL_Latin1_General_CP1_CI_AS
 
    WHERE [insert_constituent_id] IS NOT NULL) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
