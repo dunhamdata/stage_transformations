@@ -1,0 +1,248 @@
+/*===========================================================================================================================================
+ Procedure:   bc opportunity transformation
+ Create date: 2022-04-22
+ Description:  Converts RAW export data names to standardized contact schema
+ Affected table(s):
+ Parameter(s): [Dunham].[bc_sf].[opportunity],[Dunham].[bc_sf].[campaign], [Dunham].[bc_sf].[contact], [Dunham].[bc].[contact], [Dunham].[bc_sf].[npe_01_opp_payment_c]
+ Return Value(s): [Dunham].[bc].[opportunity_stage]
+ Programming Notes:
+
+      **Only records with an ID will be processed
+
+      X    [cs_opportunity_id] = Dunham.bc_sf.opportunity.id
+      X    ,[account_id] = Dunham.bc_sf.opportunity.account_id
+      X    ,[cs_account_id]
+         ,[uid] = select [uid] from Dunham.bc.contact where Dunham.bc_sf.opportunity.contact_id = Dunham.bc_sf.contact.[unique_id_c] = Dunham.bc.contact.advid
+      X    ,[opportunity_id]
+      X    ,[opportunity_name] = Dunham.bc_sf.opportunity.name
+      X    ,[created_date] = Dunham.bc_sf.opportunity.created_date
+      X    ,[close_date] = Dunham.bc_sf.opportunity.close_date
+      X    ,[stage] = Dunham.bc_sf.opportunity.stage_name
+      X    ,[status]
+      X    ,[amount] = Dunham.bc_sf.opportunity.amount
+      X    ,[no_of_expected_payments_installments_] = Dunham.bc_sf.opportunity.[no_of_expected_payments_installments_c]
+      X    ,[installment_start_date] = Dunham.bc_sf.opportunity.installment_start_date_c
+      X    ,[installment_period] = Dunham.bc_sf.opportunity.installment_period_c
+      X    ,[number_of_payments] = count(distinct id) from Dunham.bc_sf.npe_01_opp_payment_c where [npe_01_opportunity_c] = Dunham.bc_sf.opportunity.id
+      X    ,[payment_amount_received] = sum([npe_01_payment_amount_c]) from Dunham.bc_sf.npe_01_opp_payment_c where [npe_01_opportunity_c] = Dunham.bc_sf.opportunity.id
+      X    ,[primary_campaign_source] = select name from Dunahm.[bc_sf].[campaign] where [Dunham].[bc_sf].[opportunity].[campaign_id] = Dunahm.[bc_sf].[campaign].[id]
+          ,[_fivetran_synced]
+
+
+
+
+
+ =============================================================================================================================================
+ SUMMARY OF CHANGES
+ Date (yyyy-mm-dd)		Author				Comments
+ ---------------------------------------------------------------------------------------------------------------------------------------------
+
+ ==============================================================================================================================================*/
+
+/*if staging table doesn't exist, create it*/
+
+ IF OBJECT_ID('Dunham.bc.gift_stage') IS NULL
+
+  CREATE TABLE [Dunham].[bc].[opportunity_stage](
+ 	[fk_constituent_id] varchar(200) NULL,
+ 	[pk_opp_id] varchar(200) NOT NULL PRIMARY KEY,
+  [opp_name] [varchar](max) NULL,
+ 	[created_date] [datetime2] NOT NULL,
+  [installment_start_date] datetime2 NULL,
+ 	[close_date] datetime2 NULL,
+ 	[amount_committed] [float] NOT NULL,
+ 	[amount_received] [float] NULL,
+ 	[no_payments_received] int NULL,
+ 	[installment_count] int NULL,
+ 	[installment_period] [varchar](max) NULL,
+ 	[campaign] [varchar](max) NULL,
+ 	[opp_owner] [varchar](max) NULL,
+ 	[stage] [varchar](max) NULL,
+  [last_modified_date] datetime2 NULL
+     ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+
+ MERGE [Dunham].[bc].[gift_stage] WITH (HOLDLOCK) as target
+ USING(
+
+   SELECT DISTINCT
+
+   CAST([id] as varchar(200)) AS [pk_opp_id],
+
+  /*overwrites constituent_id with passthrough_id when available*/
+	CASE
+		[uid] AS [fk_constituent_id],
+
+	CASE
+		WHEN LEN([created_date])<=0
+      OR [created_date] IS NULL
+    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+		ELSE CAST([created_date] as datetime2)
+	END AS [created_date],
+
+  CASE
+		WHEN LEN([installment_start_date])<=0
+      OR [installment_start_date] IS NULL
+    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+		ELSE CAST([installment_start_date] as datetime2)
+	END AS [installment_start_date],
+
+  CASE
+		WHEN LEN([close_date])<=0
+      OR [close_date] IS NULL
+    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+		ELSE CAST([close_date] as datetime2)
+	END AS [close_date],
+
+	CASE
+    WHEN LEN([amount])<=0
+      OR [amount] IS NULL
+    THEN 0
+    ELSE CAST([amount] as float)
+  END AS [amount_committed],
+
+  CASE
+    WHEN LEN([amount_received])<=0
+      OR [amount_received] IS NULL
+    THEN 0
+    ELSE CAST([amount_received] as float)
+  END AS [amount_received],
+
+	CASE
+    WHEN LEN([campaign_name])<=0
+      OR [campaign_name] IS NULL
+    THEN NULL
+    ELSE CAST([campaign_name] as varchar(max))
+  END AS [campaign],
+
+	CASE
+    WHEN LEN([name])<=0
+      OR [name] IS NULL
+    THEN NULL
+    ELSE CAST([name] as varchar(max))
+  END AS [opp_name],
+
+  CASE
+    WHEN LEN([stage])<=0
+      OR [stage] IS NULL
+    THEN NULL
+    ELSE CAST([stage] as varchar(max))
+  END AS [stage],
+
+  CASE
+    WHEN LEN([owner])<=0
+      OR [owner] IS NULL
+    THEN NULL
+    ELSE CAST([owner] as varchar(max))
+  END AS [opp_owner],
+
+  CASE
+    WHEN LEN([installment_period_c])<=0
+      OR [installment_period_c] IS NULL
+    THEN NULL
+    ELSE CAST([installment_period_c] as varchar(max))
+  END AS [installment_period],
+
+  CASE
+    WHEN LEN([no_of_expected_payments_installments_c])<=0
+      OR [no_of_expected_payments_installments_c] IS NULL
+    THEN NULL
+    ELSE CAST([no_of_expected_payments_installments_c] as int)
+  END AS [installment_count],
+
+  CASE
+    WHEN LEN([payments_received])<=0
+      OR [payments_received] IS NULL
+    THEN NULL
+    ELSE CAST([payments_received] as int)
+  END AS [no_payments_received]
+
+  FROM [Dunham].[bc_sf].[opportunity] o
+  WHERE [id] is not null
+
+ /*calculating received payment counts and amounts*/
+
+  LEFT JOIN (
+    select count(id) as [payments_received],
+           sum(npe_01_payment_amount_c) as [amount_received]
+    from Dunham.bc_sf.npe_01_opp_payment_c
+
+  ) p on p.[npe_01_opportunity_c] = o.[id]
+
+ /*adding campaign name to opportunity table*/
+
+  LEFT JOIN (
+    select id as [campaign_id],
+           name as [campaign_name]
+    from Dunham.bc_sf.campaign
+  ) c on campaign_id = o.[campaign_id]
+
+ /*adding opportunity owner to opportunity table*/
+  LEFT JOIN (
+    select id as [owner_id],
+           name as [owner]
+    from Dunham.bc_sf.user
+  ) c on owner_id = o.[owner_id]
+
+  /*converts [Dunham].[bc_sf].[npe_01_opp_payment_c].[contact_id] to [Dunham].[bc].[contact].[uid]
+
+  LEFT JOIN (
+
+
+
+  )
+
+  ) as source
+
+  ON (target.[pk_opp_id] = source.[pk_opp_id] collate SQL_Latin1_General_CP1_CI_AS)
+
+  /*inserts .opportunity rows that are not found in .opportunity_stage rows*/
+  WHEN NOT MATCHED BY target
+    THEN INSERT ([fk_constituent_id], [pk_opp_id], [secondary_gift_id], [gift_date], [gift_amount], [appeal_code],
+                [appeal_name], [segment_code], [segment_name], [fund_code], [fund_name], [premium_code], [premium_name],
+                [media_code], [media_type], [gift_type], [utm_campaign],  [utm_content], [utm_medium], [utm_source], [utm_term],
+                [crm], [attribute_1], [attribute_2], [attribute_3], [attribute_4], [attribute_5], [client_acronym],
+                [fk_client_gift_id], [fk_client_constituent_id], [last_modified_date])
+
+         VALUES (source.[fk_constituent_id], source.[pk_opp_id], source.[secondary_gift_id], source.[gift_date], source.[gift_amount], source.[appeal_code],
+                    source.[appeal_name], source.[segment_code], source.[segment_name], source.[fund_code], source.[fund_name], source.[premium_code], source.[premium_name],
+                    source.[media_code], source.[media_type], source.[gift_type], source.[utm_campaign],  source.[utm_content], source.[utm_medium], source.[utm_source], source.[utm_term],
+                    source.[crm], [attribute_1], source.[attribute_2], source.[attribute_3], source.[attribute_4], source.[attribute_5], source.[client_acronym],
+                    source.[fk_client_gift_id], source.[fk_client_constituent_id], NULL)
+
+
+  /*removes rows from .gift_stage that do not match .gift*/
+  WHEN NOT MATCHED BY source
+  THEN DELETE
+
+
+  /*updates .gift_stage rows with matching .gift.pk_opp_id with .gift data*/
+  WHEN MATCHED THEN UPDATE SET
+                    target.[fk_constituent_id]=source.[fk_constituent_id],
+                    target.[pk_opp_id]=source.[pk_opp_id],
+                    target.[secondary_gift_id]=source.[secondary_gift_id],
+                    target.[gift_date]=source.[gift_date],
+                    target.[gift_amount]=source.[gift_amount],
+                    target.[appeal_code]=source.[appeal_code],
+                    target.[appeal_name]=source.[appeal_name],
+                    target.[segment_code]=source.[segment_code],
+                    target.[segment_name]=source.[segment_name],
+                    target.[fund_code]=source.[fund_code],
+                    target.[fund_name]=source.[fund_name],
+                    target.[premium_code]=source.[premium_code],
+                    target.[premium_name] = source.[premium_name],
+                    target.[media_code]=source.[media_code],
+                    target.[media_type]=source.[media_type],
+                    target.[gift_type]=source.[gift_type],
+                    target.[utm_campaign]=source.[utm_campaign],
+                    target.[utm_content]=source.[utm_content],
+                    target.[utm_medium]=source.[utm_medium],
+                    target.[utm_source]=source.[utm_source],
+                    target.[utm_term]=source.[utm_term],
+                    target.[crm] = source.[crm],
+                    target.[attribute_1]=source.[attribute_1],
+                    target.[attribute_2]=source.[attribute_2],
+                    target.[attribute_3]=source.[attribute_3],
+                    target.[attribute_4]=source.[attribute_4],
+                    target.[attribute_5]=source.[attribute_5],
+                    target.[fk_client_constituent_id]=source.[fk_client_constituent_id],
+                    target.[last_modified_date] = GETDATE();

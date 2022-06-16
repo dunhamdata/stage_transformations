@@ -1,0 +1,308 @@
+/*===========================================================================================================================================
+ Procedure:   bin gift transformation
+ Create date: 2022-06-06
+ Description:  Converts RAW export data names to standardized contact schema
+ Affected table(s):
+ Parameter(s): [Dunham].[bin].[gift]
+ Return Value(s): [Dunham].[bin].[gift_stage]
+ Programming Notes:
+
+      **Only records with an ID will be processed
+
+                Gift Type:
+                1. Recurring Donation: recurring status = 'active'
+                2. Regular Donation: none of the above
+
+
+
+ =============================================================================================================================================
+ SUMMARY OF CHANGES
+ Date (yyyy-mm-dd)		Author				Comments
+ ---------------------------------------------------------------------------------------------------------------------------------------------
+ 2022-05-17           JB            Updated .gift_stage.gift_amount to float from decimal
+ 2022-06-06           JB            Updated [fk_constituent_id] = [signup_nationbuilder_id] and [gift_date] = [succeeded_at]
+ ==============================================================================================================================================*/
+
+/*if staging table doesn't exist, create it*/
+
+ IF OBJECT_ID('Dunham.bin.gift_stage') IS NULL
+
+  CREATE TABLE [Dunham].[bin].[gift_stage](
+ 	[fk_constituent_id] varchar(200) NULL,
+ 	[pk_gift_id] varchar(200) NOT NULL PRIMARY KEY,
+ 	[secondary_gift_id] [varchar](100) NULL,
+ 	[gift_date] [datetime2] NOT NULL,
+ 	[gift_amount] [float] NOT NULL,
+ 	[appeal_code] [varchar](max) NULL,
+ 	[appeal_name] [varchar](max) NULL,
+ 	[segment_code] [varchar](max) NULL,
+ 	[segment_name] [varchar](max) NULL,
+ 	[fund_code] [varchar](max) NULL,
+ 	[fund_name] [varchar](max) NULL,
+ 	[premium_code] [varchar](max) NULL,
+ 	[premium_name] [varchar](max) NULL,
+ 	[media_code] [varchar](max) NULL,
+ 	[media_type] [varchar](max) NULL,
+ 	[gift_type] [varchar](100) NULL,
+  [utm_campaign] [varchar](50) NULL,
+  [utm_content] [varchar](50) NULL,
+  [utm_medium] [varchar](50) NULL,
+  [utm_source] [varchar](50) NULL,
+  [utm_term] [varchar](50) NULL,
+ 	[crm] [varchar](50) NULL,
+ 	[attribute_1] [varchar](max) NULL,
+ 	[attribute_2] [varchar](max) NULL,
+ 	[attribute_3] [varchar](max) NULL,
+ 	[attribute_4] [varchar](max) NULL,
+ 	[attribute_5] [varchar](max) NULL,
+ 	[client_acronym] [varchar] (10) NOT NULL,
+ 	[fk_client_gift_id] [varchar] (210) NOT NULL,
+ 	[fk_client_constituent_id] [varchar] (210) NULL,
+   [last_modified_date] datetime2 NULL
+     ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+
+ MERGE [Dunham].[bin].[gift_stage] WITH (HOLDLOCK) as target
+ USING(
+
+   SELECT DISTINCT
+
+   CAST([nationbuilder_id] as varchar(200)) AS [pk_gift_id],
+
+  /*overwrites constituent_id with passthrough_id when available - commented out passthrough due to field availability*/
+	CASE
+		WHEN [signup_nationbuilder_id] is null THEN CAST([recruiter_id] as varchar(200))
+		WHEN [signup_nationbuilder_id] is null and [recruiter_id] is null
+    THEN CAST('DC007' as varchar(200))
+		ELSE CAST([signup_nationbuilder_id] as varchar(200))
+	END AS [fk_constituent_id],
+
+  /*typically used for legacy gift id in CRM*/
+	/*CASE
+    WHEN LEN([insert_secondary_id])<=0
+      OR [insert_secondary_id] IS NULL
+    THEN NULL
+    ELSE CAST([insert_secondary_id] as varchar(100))
+  END*/
+  NULL AS [secondary_gift_id],
+
+	CASE
+		WHEN LEN([succeeded_at])<=0
+      OR [succeeded_at] IS NULL
+    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+		ELSE CAST([succeeded_at] as datetime2)
+	END AS [gift_date],
+
+	CASE
+    WHEN LEN([amount])<=0
+      OR [amount] IS NULL
+    THEN 0
+    ELSE CAST([amount] as float)
+  END AS [gift_amount],
+
+	CASE
+    WHEN LEN([tracking_code_slug])<=0
+      OR [tracking_code_slug] IS NULL
+    THEN NULL
+    ELSE CAST([tracking_code_slug] as varchar(max))
+  END AS [appeal_code],
+
+	CASE
+    WHEN LEN([tracking_code_slug])<=0
+      OR [tracking_code_slug] IS NULL
+    THEN NULL
+    ELSE CAST([tracking_code_slug] as varchar(max))
+  END AS [appeal_name],
+
+	CASE
+    WHEN LEN([_hidden_segment])<=0
+      OR [_hidden_segment] IS NULL
+    THEN NULL
+    ELSE CAST([_hidden_segment] as varchar(max))
+  END AS [segment_code],
+
+	CASE
+    WHEN LEN([_hidden_pack])<=0
+      OR [_hidden_pack] IS NULL
+    THEN NULL
+    ELSE CAST([_hidden_pack] as varchar(max))
+  END AS [segment_name],
+
+	CASE
+    WHEN LEN([_hidden_channel])<=0
+      OR [_hidden_channel] IS NULL
+    THEN NULL
+    ELSE CAST([_hidden_channel] as varchar(max))
+  END AS [fund_code],
+
+	CASE
+    WHEN LEN([_hidden_channel])<=0
+      OR [_hidden_channel] IS NULL
+    THEN NULL
+    ELSE CAST([_hidden_channel] as varchar(max))
+  END AS [fund_name],
+
+	/*CASE
+    WHEN LEN([insert_premium_code])<=0
+      OR [insert_premium_code] IS NULL
+    THEN NULL
+    ELSE CAST([insert_premium_code] as varchar(max))
+  END*/
+  NULL AS [premium_code],
+
+	/*CASE
+    WHEN LEN([insert_premium_name])<=0
+      OR [insert_premium_name] IS NULL
+    THEN NULL
+    ELSE CAST([insert_premium_name] as varchar(max))
+  END*/
+  NULL AS [premium_name],
+
+	/*CASE
+    WHEN LEN([insert_media_code])<=0
+      OR [insert_media_code] IS NULL
+    THEN NULL
+    ELSE CAST([insert_media_code] as varchar(max))
+  END*/
+  NULL AS [media_code],
+
+	/*CASE
+    WHEN LEN([insert_media_type])<=0
+      OR [insert_media_type] IS NULL
+    THEN NULL
+    ELSE CAST([insert_media_type] as varchar(max))
+  END*/
+  NULL AS [media_type],
+
+  /*can be custom designated by client; these are default selections*/
+  CASE
+		WHEN [recurring_donation_status] = 'Active'
+    THEN 'Recurring Donation'
+		ELSE 'Regular Donation'
+	END AS [gift_type],
+
+  /*CASE
+    WHEN LEN([insert_utm_campaign])<=0
+      OR [insert_utm_campaign] IS NULL
+    THEN NULL
+    ELSE CAST([insert_utm_campaign] as varchar(50))
+  END*/
+  NULL AS [utm_campaign],
+
+  /*CASE
+    WHEN LEN([insert_utm_content])<=0
+      OR [insert_utm_content] IS NULL
+    THEN NULL
+    ELSE CAST([insert_utm_content] as varchar(50))
+  END*/
+  NULL AS [utm_content],
+
+  /*CASE
+    WHEN LEN([insert_utm_medium])<=0
+      OR [insert_utm_medium] IS NULL
+    THEN NULL
+    ELSE CAST([insert_utm_medium] as varchar(50))
+  END*/
+  NULL AS [utm_medium],
+
+  /*CASE
+    WHEN LEN([insert_utm_source])<=0
+      OR [insert_utm_source] IS NULL
+    THEN NULL
+    ELSE CAST([insert_utm_source] as varchar(50))
+  END*/
+  NULL AS [utm_source],
+
+  /*CASE
+    WHEN LEN([insert_utm_term])<=0
+      OR [insert_utm_term] IS NULL
+    THEN NULL
+    ELSE CAST([insert_utm_term] as varchar(50))
+  END*/
+  NULL AS [utm_term],
+
+  /*[crm] only used for clients combining multiple crm's*/
+	/*CASE
+    WHEN LEN([attribute_1])<=0
+      OR [attribute_1] IS NULL
+    THEN NULL
+    ELSE CAST([attribute_1] varchar(50))
+  END*/
+  NULL AS [crm],
+
+  /*'wildcard' gift fields that are custom per client*/
+	NULL AS [attribute_1],
+	NULL AS [attribute_2],
+	NULL AS [attribute_3],
+	NULL AS [attribute_4],
+	NULL AS [attribute_5],
+
+  /*these id's are used for aggregate PK and FK; need to update all "CLIENT" to client acronym*/
+	CAST(UPPER('bin') as varchar(10)) AS [client_acronym],
+
+  /*creates unique gift_id for aggregate gift table PK, used as FK in gift_stage*/
+
+  CAST(CONCAT(UPPER('bin'),'_',[nationbuilder_id]) as varchar(210)) AS [fk_client_gift_id],
+
+  /*creates unique constituent_id for aggregate gift table FK, used as FK in gift_stage*/
+	CASE
+    WHEN [signup_nationbuilder_id] IS NULL
+    THEN CAST(CONCAT(UPPER('bin'),'_DC007') as varchar(210))
+    ELSE CAST(CONCAT(UPPER('bin'),'_',[signup_nationbuilder_id]) as varchar(210))
+  END AS [fk_client_constituent_id]
+
+  FROM [Dunham].[bin].[gift]
+  WHERE [nationbuilder_id] is not null) as source
+
+  ON (target.[pk_gift_id] = source.[pk_gift_id] collate SQL_Latin1_General_CP1_CI_AS)
+
+  /*inserts .gift rows that are not found in .gift_stage rows*/
+  WHEN NOT MATCHED BY target
+    THEN INSERT ([fk_constituent_id], [pk_gift_id], [secondary_gift_id], [gift_date], [gift_amount], [appeal_code],
+                [appeal_name], [segment_code], [segment_name], [fund_code], [fund_name], [premium_code], [premium_name],
+                [media_code], [media_type], [gift_type], [utm_campaign],  [utm_content], [utm_medium], [utm_source], [utm_term],
+                [crm], [attribute_1], [attribute_2], [attribute_3], [attribute_4], [attribute_5], [client_acronym],
+                [fk_client_gift_id], [fk_client_constituent_id], [last_modified_date])
+
+         VALUES (source.[fk_constituent_id], source.[pk_gift_id], source.[secondary_gift_id], source.[gift_date], source.[gift_amount], source.[appeal_code],
+                    source.[appeal_name], source.[segment_code], source.[segment_name], source.[fund_code], source.[fund_name], source.[premium_code], source.[premium_name],
+                    source.[media_code], source.[media_type], source.[gift_type], source.[utm_campaign],  source.[utm_content], source.[utm_medium], source.[utm_source], source.[utm_term],
+                    source.[crm], [attribute_1], source.[attribute_2], source.[attribute_3], source.[attribute_4], source.[attribute_5], source.[client_acronym],
+                    source.[fk_client_gift_id], source.[fk_client_constituent_id], NULL)
+
+
+  /*removes rows from .gift_stage that do not match .gift*/
+  WHEN NOT MATCHED BY source
+  THEN DELETE
+
+
+  /*updates .gift_stage rows with matching .gift.pk_gift_id with .gift data*/
+  WHEN MATCHED THEN UPDATE SET
+                    target.[fk_constituent_id]=source.[fk_constituent_id],
+                    target.[pk_gift_id]=source.[pk_gift_id],
+                    target.[secondary_gift_id]=source.[secondary_gift_id],
+                    target.[gift_date]=source.[gift_date],
+                    target.[gift_amount]=source.[gift_amount],
+                    target.[appeal_code]=source.[appeal_code],
+                    target.[appeal_name]=source.[appeal_name],
+                    target.[segment_code]=source.[segment_code],
+                    target.[segment_name]=source.[segment_name],
+                    target.[fund_code]=source.[fund_code],
+                    target.[fund_name]=source.[fund_name],
+                    target.[premium_code]=source.[premium_code],
+                    target.[premium_name] = source.[premium_name],
+                    target.[media_code]=source.[media_code],
+                    target.[media_type]=source.[media_type],
+                    target.[gift_type]=source.[gift_type],
+                    target.[utm_campaign]=source.[utm_campaign],
+                    target.[utm_content]=source.[utm_content],
+                    target.[utm_medium]=source.[utm_medium],
+                    target.[utm_source]=source.[utm_source],
+                    target.[utm_term]=source.[utm_term],
+                    target.[crm] = source.[crm],
+                    target.[attribute_1]=source.[attribute_1],
+                    target.[attribute_2]=source.[attribute_2],
+                    target.[attribute_3]=source.[attribute_3],
+                    target.[attribute_4]=source.[attribute_4],
+                    target.[attribute_5]=source.[attribute_5],
+                    target.[fk_client_constituent_id]=source.[fk_client_constituent_id],
+                    target.[last_modified_date] = GETDATE();

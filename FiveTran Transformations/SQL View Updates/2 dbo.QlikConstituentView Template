@@ -1,0 +1,138 @@
+USE [insert_upper_client]
+GO
+
+/****** Object:  View [dbo].[QlikConstituentView]    Script Date: 5/17/2022 1:06:01 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+ALTER View [dbo].[QlikConstituentView] AS
+/*===========================================================================================================================================
+ Procedure:  insert_upper_client Constituent Transformation
+ Create date: 2022-02-23
+ Description:  Converts RAW Data names to Aggregate Constituent Table Names
+ Affected table(s):
+ Parameter(s): [Dunham].[insert_client].[contact_stage]
+ Return Value(s): [insert_upper_client].[dbo].[QlikConstituentView]
+ Programming Notes:
+
+ Exclusions:
+ =============================================================================================================================================
+ SUMMARY OF CHANGES
+ Date (yyyy-mm-dd)		Author				Comments
+ ---------------------------------------------------------------------------------------------------------------------------------------------
+ 2021-07-20				Reece Parker		Changed code structure to best practices format
+ 2021-08-24				Reece Parker		Added 2 columns:  ClientAcronym, ClientConstituentID
+ 2022-03-25				JB					    Updated source to Dunham.insert_client.contact_stage from Dunham.insert_client.contact
+ ==============================================================================================================================================*/
+
+Select DISTINCT top 100 PERCENT
+
+	pk_constituent_id as [ConstituentID],
+
+	company_name as [CompanyName],
+
+	contact_type AS [ContactType],
+
+	salutation as [Salutation],
+
+	addressee as [Addressee],
+
+	title as [Title],
+
+	last_name as [LastName],
+
+	first_name as [FirstName],
+
+	suffix as [Suffix],
+
+	NULL as [Gender],
+
+	NULL as [BirthYear],
+
+/* Converts Date Format '6/26/2021 18:06' or '6/26/2021' to UTC 24-hr for Dunham Insights */
+	account_created_date as AccountCreatedDate,
+
+	address_line_1 as [Addressline1],
+
+	address_line_2 as [Addressline2],
+
+	address_line_3 as [Addressline3],
+
+	city as [City],
+
+	[state] as [State],
+
+	postal as [Postal],
+
+	country as [Country],
+
+	primary_email as [PrimaryEmailAddress],
+
+	secondary_email as [SecondaryEmailAddress],
+
+	primary_phone as [PrimaryPhone],
+
+	secondary_phone as [SecondaryPhone],
+
+	tags as [ContactTag],
+
+	portfolio as [CurrentPortfolio],
+
+	gift_stage as [GiftStage],
+
+	NULL as [GiftGoal],
+
+	gift_range as [GiftRange],
+
+	gift_rating as [GiftRating],
+
+	gift_score as [GiftScore],
+
+	NULL as [Trust],
+
+	NULL as [ProposalType],
+
+/* Deceased Date is read as a boolean column in Dunham Insights.  NOT AN ACTUAL DATE */
+	deceased as [DeceasedDate],
+
+	NULL as [CommunicationPreference],
+
+	NULL as [PrimaryMediaCode],
+
+	NULL as [SecondaryMediaCode],
+
+	NULL as [TertiaryMediaCode],
+
+	CASE WHEN [appeal_eligible]=0 or [newsletter_eligible]=0 THEN 1 ELSE 0 END as [DoNotMail],
+
+	/*(CASE WHEN [No Valid Address?]='Yes' THEN '1' ELSE '0' END)*/'0' as [BadAddress],
+
+	CASE WHEN email_eligible = 0 THEN 1 ELSE 0 END [DoNotEMail],
+
+/* When an Attribute is used, change the Column name */
+	NULL as [Attribute1],
+
+	NULL as [Attribute2],
+
+	NULL as [Attribute3],
+
+	NULL as [Attribute4],
+
+	NULL as [Attribute5],
+
+/*	These 2 columns are added for the ClientMaster aggregate table
+	ClientAcronym is for client joins to [CDATA].[dbo].[martech]
+	ClientConstituentID creates a unique ID across all clients
+*/
+	client_acronym as [ClientAcronym],
+
+	fk_client_constituent_id as [ClientConstituentID]
+
+/* SubQuery to create a distinct RowNumber column with 1 RowID instance per ID to eliminate duplicate Constituent IDs */
+FROM
+	(SELECT * FROM Dunham.insert_client.contact_stage) AS a
+GO

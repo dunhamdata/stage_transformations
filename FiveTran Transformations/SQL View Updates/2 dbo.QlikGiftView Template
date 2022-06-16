@@ -1,0 +1,113 @@
+USE [insert_upper_client]
+GO
+
+/****** Object:  View [dbo].[QlikGiftView]    Script Date: 5/17/2022 1:13:50 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+ALTER View [dbo].[QlikGiftView] AS
+/*===========================================================================================================================================
+ Procedure:  insert_upper_client Gift Transformation
+ Create date: 2022-02-23
+ Description:  Converts RAW Data names to Aggregate Gift Table Names
+ Affected table(s):
+ Parameter(s): [Dunham].[insert_client].[gift_stage]
+ Return Value(s): [insert_upper_client].[dbo].[QlikGiftView]
+ Programming Notes:
+
+ Exclusions:
+ =============================================================================================================================================
+ SUMMARY OF CHANGES
+ Date (yyyy-mm-dd)		Author				Comments
+ ---------------------------------------------------------------------------------------------------------------------------------------------
+ 2021-07-21				Reece Parker		Changed code structure to best practices format
+ 2021-08-30				Reece Parker		Added 3 columns:  ClientAcronym, ClientGiftID, ClientConstituentID
+ 2022-05-17 			JB					    Updated source to Dunham.insert_client.gift_stage from Dunham.insert_client.gift
+ ==============================================================================================================================================*/
+SELECT DISTINCT TOP 100 PERCENT
+
+	fk_constituent_id as [ConstituentID],
+
+	pk_gift_id as [GiftID],
+
+	NULL as [PassthroughID],
+
+	secondary_gift_id as [SecondaryID],
+
+	NULL as [TransactionSource],
+
+	NULL as [IPAddress],
+
+	gift_date as [GiftDate],
+
+	gift_amount as [GiftAmount],
+
+	appeal_code as [AppealCode],
+
+	appeal_name as [AppealName],
+
+	segment_code as [SegmentCode],
+
+	segment_name as [SegmentName],
+
+	fund_code as [FundCode],
+
+	fund_name as [FundDescription],
+
+	premium_code as [PremiumCode],
+
+	premium_name as [PremiumName],
+
+	NULL as [PremiumQuantity],
+
+	media_code as [MediaCode],
+
+	media_type as [MediaType],
+
+	gift_type as [GiftType],
+
+	utm_campaign as [UTMCampaign],
+
+	utm_content as [UTMContent],
+
+	utm_medium as [UTMMedium],
+
+	utm_source as [UTMSource],
+
+	utm_term as [UTMTerm],
+
+	CASE WHEN gift_type='Recurring Donation' THEN 1 ELSE 0 END as [IsRecurring],
+
+	NULL as [RecurringStartDate],
+
+	NULL as [Attribute1],
+
+	NULL as [Attribute2],
+
+	NULL as [Attribute3],
+
+	NULL as [Attribute4],
+
+	NULL as [Attribute5],
+
+/*	These 3 columns are added for the ClientMaster aggregate table
+	ClientAcronym is for client joins to [CDATA}.[dbo].[martech]
+	ClientGiftID creates a unique ID across all clients
+	ClientConstituentID creates a unique ID across all clients
+*/
+	client_acronym as [ClientAcronym],
+
+	fk_client_gift_id as [ClientGiftID],
+
+	fk_client_constituent_id as [ClientConstituentID]
+
+/* SubQuery to create a distinct RowNumber column with 1 RowID instance per ID to eliminate duplicate Constituent IDs */
+FROM
+	(SELECT * FROM [Dunham].[insert_client].[gift_stage]) AS a
+
+GO
