@@ -1,2 +1,2 @@
-# tr_gift_stage
-Repository for all client .gift table transformations into .gift_stage standardized schema
+# stage_transformations
+Repository for all client .gift and .contact table transformations into .gift_stage and .contact_stage standardized schemas
