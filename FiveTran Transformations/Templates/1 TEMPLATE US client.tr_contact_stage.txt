@@ -1,6 +1,6 @@
 /*===========================================================================================================================================
  Procedure:   insert_client contact transformation
- Create date: 2022-05-16
+ Create date: 2022-06-16
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
  Parameter(s): [Dunham].[insert_client].[contact]
@@ -10,6 +10,7 @@
       **Only rows with a ID will be brought in for analysis
 
                 Contact Type:
+                #. Regular Donor: none of the above are true/no specialty groups identified
 
                 Demographic Columns:
                 1. NULL
@@ -197,22 +198,30 @@ USING(
       NULL as [address_line_3],
 
 			/*CASE
-        WHEN [insert_city] is null
-        THEN null
-        ELSE CAST([insert_city] as varchar(max))
+        WHEN [place_name] IS NULL
+          AND [insert_city] IS NOT NULL
+        THEN CAST([insert_city] as varchar(max))
+        WHEN [place_name] IS NULL
+          AND [insert_city] IS NULL
+        THEN NULL
+        ELSE CAST([place_name] as varchar(max))
       END*/
       NULL as [city],
 
       CASE
-        WHEN [admin_name_2] is null
-        THEN null
+        WHEN [admin_name_2] IS NULL
+        THEN NULL
         ELSE CAST([admin_name_2] as varchar(max))
       END as [county],
 
       /*CASE
-        WHEN [insert_state] is null
-        THEN null
-        ELSE CAST([insert_state] as varchar(max))
+        WHEN [admin_code_1] IS NULL
+          AND [insert_state] IS NOT NULL
+        THEN CAST([insert_state] as varchar(max))
+        WHEN [admin_code_1] IS NULL
+          AND [insert_state] IS NULL
+        THEN NULL
+        ELSE CAST([admin_code_1] as varchar(max))
       END*/
       NULL as [state],
 
@@ -224,16 +233,20 @@ USING(
       NULL as [postal],
 
       /*CASE
-        WHEN [insert_country] is null
-        THEN null
-        ELSE CAST([insert_country] as varchar(max))
+        WHEN [country_code] IS NULL
+          AND [insert_country] IS NOT NULL
+        THEN CAST([insert_country] as varchar(max))
+        WHEN [country_code] IS NULL
+          AND [insert_country] IS NULL
+        THEN NULL
+        ELSE CAST([country_code] as varchar(max))
       END*/
       NULL as [country],
 
       CASE
-        WHEN [dma_name] is null
+        WHEN [admin_name_2] IS NULL
         THEN NULL
-        ELSE CAST([dma_name] as varchar(max))
+        ELSE CAST([admin_name_2] as varchar(max))
       END as [dma],
 
       CASE
@@ -270,6 +283,11 @@ USING(
         WHEN [insert_primary_email] IS NULL
           AND [insert_secondary_email] IS NOT NULL
         THEN NULL
+
+        /*removes secondary email duplication if secondary email is equivalent to primary email*/
+        WHEN LOWER([insert_primary_email]) = LOWER([insert_secondary_email])
+        THEN NULL
+
         ELSE CAST(LOWER([insert_secondary_email]) as varchar(max))
       END*/
       NULL as [secondary_email],
@@ -288,10 +306,16 @@ USING(
       /*CASE
         WHEN [insert_secondary_phone] IS NULL
         THEN NULL
+
         /*removes secondary phone duplication when secondary phone inserted into primary phone*/
         WHEN [insert_primary_phone] IS NULL
           AND [insert_secondary_phone] IS NOT NULL
         THEN NULL
+
+        /*removes secondary phone duplication when secondary phone is equivalent to primary phone*/
+        WHEN [insert_primary_phone] = [insert_secondary_phone]
+        THEN NULL
+
         ELSE CAST([insert_secondary_phone] as varchar(max))
       END*/
       NULL as [secondary_phone],
@@ -347,11 +371,15 @@ USING(
 			/*CASE
         WHEN [insert_gift_score] IS NULL
         THEN NULL
+
+        /*auto formatting p2g score for consistencies in field*/
         WHEN CHARINDEX('|', [insert_gift_score]) = 0
         THEN CAST(CONCAT(LEFT([insert_gift_score],1),'|',RIGHT([insert_gift_score],1)) as varchar(max))
+
         ELSE CAST([insert_gift_score] as varchar(max))
       END*/
       NULL as [gift_score],
+
     /*end donor advancement specific columns*/
 
       /*custom by client, may contain true/false or date; output as bit/boolean
@@ -373,9 +401,17 @@ USING(
         THEN 0
 
         /*excludes foreign addresses - US*/
-				WHEN UPPER([country_code])<>'US'
-          AND [country_code] is not null
+        WHEN [country_code] IS NOT NULL
+          AND (UPPER([country_code])<>'US')
         THEN 0
+        WHEN [country_code] IS NULL
+          AND [insert_country] IS NOT NULL
+          AND (UPPER([insert_country]) <> 'US'
+                OR UPPER([insert_country]) <> 'USA'
+                OR UPPER([insert_country]) <> 'UNITED STATES'
+                OR UPPER([insert_country]) <> 'UNITED STATES OF AMERICA')
+        THEN 0
+
 
         /*excludes deceased - default as date entry*/
         WHEN [insert_deceased_date] IS NOT NULL
@@ -392,8 +428,15 @@ USING(
         THEN 0
 
         /*excludes foreign addresses - US*/
-				WHEN UPPER([country_code])<>'US'
-          AND [country_code] is not null
+        WHEN [country_code] IS NOT NULL
+          AND (UPPER([country_code])<>'US')
+        THEN 0
+        WHEN [country_code] IS NULL
+          AND [insert_country] IS NOT NULL
+          AND (UPPER([insert_country]) <> 'US'
+                OR UPPER([insert_country]) <> 'USA'
+                OR UPPER([insert_country]) <> 'UNITED STATES'
+                OR UPPER([insert_country]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -493,18 +536,17 @@ USING(
 
 /*joins standardized address information on zip codes*/
 
-  LEFT JOIN (
-    SELECT DISTINCT cast(postal_code as varchar(max)) as postal_code,
-           country_code,
-           place_name,
-           admin_code_1,
-           admin_name_2,
-           latitude,
-           longitude,
-           name as dma_name
-    FROM Dunham.geo.us_postal_codes_to_markets
-
-  ) geo ON geo.postal_code = c.[insert_postal]
+   LEFT JOIN (
+    SELECT DISTINCT
+        CAST(postal_code as varchar(max)) as postal_code,
+        country_code,
+        place_name,
+        admin_code_1,
+        admin_name_2,
+        latitude,
+        longitude
+    FROM [Dunham].[geo].[geonames_postal_code_all]
+   ) geo on geo.[postal_code] = c.[insert_postal]
 
    WHERE [insert_constituent_id] IS NOT NULL) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
