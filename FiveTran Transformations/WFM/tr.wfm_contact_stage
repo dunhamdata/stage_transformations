@@ -559,7 +559,7 @@ USING(
      FROM Dunham.wfm.gift
      where [recurring_gift_payments_gift_contact_id] is not null
    ) g on g.[contact_id] = c.[id]
-   WHERE [id] IS NOT NULL and [is_archived]<>1) AS source
+ WHERE [id] IS NOT NULL and ([is_archived]<>1 OR [is_archived] IS NULL)) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
 
    /*inserts .contact rows that are not found in .contact_stage rows*/
