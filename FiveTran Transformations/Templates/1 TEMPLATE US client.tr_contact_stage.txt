@@ -3,7 +3,7 @@
  Create date: 2022-06-16
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[insert_client].[contact]
+ Parameter(s): [Dunham].[insert_client].[contact], [Dunham].[geo].[us_postal_codes_to_markets], [Dunham].[geo].[geonames_postal_code_all]
  Return Value(s): [Dunham].[insert_client].[contact_stage]
  Programming Notes:
 
@@ -539,21 +539,33 @@ USING(
       LEFT JOIN (
       SELECT
              [country_code]
-            ,[postal_code]
-            ,[place_name] as [global_city]
-            ,[admin_code_1] as [global_state]
-            ,[admin_name_2] as [global_county]
+            ,postal_code
+            ,[global_city]
+            ,[global_state]
+            ,[global_county]
             ,[latitude]
             ,[longitude]
-            ,[us_dma] as [global_dma]
-       FROM [Dunham].[geo].[geonames_postal_code_all]
-       LEFT JOIN (
-       SELECT
-             [postal_code] as [us_postal],
-             [name] as [us_dma]
-         FROM [Dunham].[geo].[us_postal_codes_to_markets]
-       ) us ON us.[us_postal] = [postal_code]
-      ) geo on geo.[postal_code] = c.[insert_postal] collate SQL_Latin1_General_CP1_CI_AS
+            ,[global_dma]
+            FROM (
+          	  SELECT DISTINCT
+                      CAST([postal_code] as varchar(max)) as postal_code
+          			      ,[country_code]
+                      ,[place_name] as [global_city]
+                      ,[admin_name_1] as [global_state]
+                      ,[admin_name_2] as [global_county]
+                      ,[latitude]
+                      ,[longitude]
+                      ,[us_dma] as [global_dma]
+          			,ROW_NUMBER() OVER (PARTITION BY postal_code ORDER BY country_code DESC) as row_id
+                 FROM [Dunham].[geo].[geonames_postal_code_all]
+                 LEFT JOIN (
+                 SELECT
+                       CAST([postal_code] as varchar(max)) as [us_postal],
+                       [name] as [us_dma]
+                   FROM [Dunham].[geo].[us_postal_codes_to_markets]
+                 ) us ON us.[us_postal] = [postal_code]) a
+          	   where row_id = 1
+      ) geo on geo.[postal_code] = c.[insert_postal]
 
    WHERE [insert_constituent_id] IS NOT NULL) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)

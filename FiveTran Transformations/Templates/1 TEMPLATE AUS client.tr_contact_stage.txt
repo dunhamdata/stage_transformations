@@ -3,7 +3,7 @@
  Create date: 2022-06-16
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[insert_client].[contact]
+ Parameter(s): [Dunham].[insert_client].[contact], [Dunham].[geo].[sa_3_2016_aust], [Dunham].[geo].[geonames_postal_code_all]
  Return Value(s): [Dunham].[insert_client].[contact_stage]
  Programming Notes:
 
@@ -537,9 +537,9 @@ USING(
    LEFT JOIN (
    SELECT
           [country_code]
-         ,[postal_code]
+         ,CAST([postal_code] as varchar(max)) as [postal_code]
          ,[place_name] as [global_city]
-         ,[admin_code_1] as [global_state]
+         ,[admin_name_1] as [global_state]
          ,[admin_name_2] as [global_county]
          ,[latitude]
          ,[longitude]
@@ -556,13 +556,13 @@ USING(
       where charindex('(',[sa_3_name_2016])=0
       AND (f.value <> '-'
         AND f.value <> 'North'
-        AND f.value <> 'South' 
+        AND f.value <> 'South'
         AND f.value <> 'East'
         AND f.value <> 'West')
     ) aus ON (aus.[AUS City] = [place_name] AND aus.[AUS State]=[admin_code_1])
    ) geo on geo.[postal_code] = c.[insert_postal] collate SQL_Latin1_General_CP1_CI_AS
 
-   WHERE [insert_constituent_id] IS NOT NULL) AS source
+   WHERE [insert_constituent_id] IS NOT NULL and row_id = 1) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
 
    /*inserts .contact rows that are not found in .contact_stage rows*/
