@@ -535,25 +535,36 @@ USING(
 
         /*joins standardized address information on zip codes*/
 
-        LEFT JOIN (
-        SELECT
-             [country_code]
-            ,CAST([postal_code] as varchar(max)) as postal_code
-            ,[place_name] as [global_city]
-            ,[admin_name_1] as [global_state]
-            ,[admin_name_2] as [global_county]
-            ,[latitude]
-            ,[longitude]
-            ,[us_dma] as [global_dma]
-        ,ROW_NUMBER() OVER (PARTITION BY postal_code ORDER BY country_code DESC) as row_id
-        FROM [Dunham].[geo].[geonames_postal_code_all]
-        LEFT JOIN (
-        SELECT
-             CAST([postal_code] as varchar(max)) as [us_postal],
-             [name] as [us_dma]
-         FROM [Dunham].[geo].[us_postal_codes_to_markets]
-        ) us ON us.[us_postal] = [postal_code]
-        ) geo on geo.[postal_code] = CAST(a.[billing_postal_code] as varchar(max))
+           LEFT JOIN (
+           SELECT
+                  [country_code]
+                 ,postal_code
+                 ,[global_city]
+                 ,[global_state]
+                 ,[global_county]
+                 ,[latitude]
+                 ,[longitude]
+                 ,[global_dma]
+                 FROM (
+               	  SELECT DISTINCT
+                           CAST([postal_code] as varchar(max)) as postal_code
+               			      ,[country_code]
+                           ,[place_name] as [global_city]
+                           ,[admin_name_1] as [global_state]
+                           ,[admin_name_2] as [global_county]
+                           ,[latitude]
+                           ,[longitude]
+                           ,[us_dma] as [global_dma]
+               			,ROW_NUMBER() OVER (PARTITION BY postal_code ORDER BY country_code DESC) as row_id
+                      FROM [Dunham].[geo].[geonames_postal_code_all]
+                      LEFT JOIN (
+                      SELECT
+                            CAST([postal_code] as varchar(max)) as [us_postal],
+                            [name] as [us_dma]
+                        FROM [Dunham].[geo].[us_postal_codes_to_markets]
+                      ) us ON us.[us_postal] = [postal_code]) a
+               	   where row_id = 1
+           ) geo on geo.[postal_code] = a.[billing_postal_code]
 
 
         LEFT JOIN (
@@ -578,7 +589,7 @@ USING(
          WHERE [is_deleted]=0
         ) c on c.[account_id]=a.[id]
 
-        WHERE [id] IS NOT NULL AND row_id = 1 AND RowID = 1) AS source
+        WHERE [id] IS NOT NULL AND RowID = 1) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
 
    /*inserts .contact rows that are not found in .contact_stage rows*/
