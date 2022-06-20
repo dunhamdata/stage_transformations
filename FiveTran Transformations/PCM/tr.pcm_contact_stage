@@ -1,62 +1,59 @@
 /*===========================================================================================================================================
  Procedure:   pcm contact transformation
- Create date: 2022-06-13
+ Create date: 2022-06-20
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[pcm].[contact]
+ Parameter(s): [Dunham].[pcm].[contact], [Dunham].[geo].[us_postal_codes_to_markets], [Dunham].[geo].[geonames_postal_code_all], [Dunham].[pcm].[gift]
  Return Value(s): [Dunham].[pcm].[contact_stage]
  Programming Notes:
 
- Programming Notes:
+ **Only rows with a ID will be brought in for analysis
 
-     **Only rows with a ID will be brought in for analysis
+           Contact Type:
+           1. Recurring Donor: recurring gift id present in gift table
+           2. Regular Donor: none of the above
 
-               Contact Type:
-               1. Recurring Donor: recurring gift id present in gift table
-               2. Regular Donor: none of the above
-
-               Demographic Columns:
-               1. Gender
-               2. NULL
-               3. NULL
-               4. NULL
-               5. NULL
-
-Exclusions:
-               Appeal exclusions:
-               1. address is blank
-               2. foreign address
-               3. deceased
-             CUSTOM EXCLUSIONS:
-               4. communication preference = 'Do not mail'
-
-               Newsletter exclusions:
-               1. address is blank
-               2. foreign address
-               3. deceased
-             CUSTOM EXCLUSIONS:
-               4. communication preference = 'Do not mail'
-               5. Includes communication preference = 'Newsletter Opt-in'
-
-               Email exclusions:
-               1. primary and secondary email are blank
-               2. deceased
-             CUSTOM EXCLUSIONS:
-               3. communication preference = 'Do not email'
-
-               Text exclusions:
-               1. primary and secondary phone are blank
-               2. deceased
+           Demographic Columns:
+           1. NULL
+           2. NULL
+           3. NULL
+           4. NULL
+           5. NULL
 
 
-=============================================================================================================================================
-SUMMARY OF CHANGES
-Date (yyyy-mm-dd)		Author				Comments
----------------------------------------------------------------------------------------------------------------------------------------------
-2022-05-17             JB            Updated Contact Type to mark donors as recurring when [recurring_gift_payments_gift_contact_id]
-                                     in [Dunham].[pcm].[gift] is not null for unique donors
-2022-06-13             JB            Updated with new location information and contact_stage schema
-==============================================================================================================================================*/
+           Exclusions:
+                          Appeal exclusions:
+                          1. address is blank
+                          2. foreign address
+                          3. deceased
+                        CUSTOM EXCLUSIONS:
+                          4. communication preference = 'Do not mail'
+
+                          Newsletter exclusions:
+                          1. address is blank
+                          2. foreign address
+                          3. deceased
+                        CUSTOM EXCLUSIONS:
+                          4. communication preference = 'Do not mail'
+                          5. Includes communication preference = 'Newsletter Opt-in'
+
+                          Email exclusions:
+                          1. primary and secondary email are blank
+                          2. deceased
+                        CUSTOM EXCLUSIONS:
+                          3. communication preference = 'Do not email'
+
+                          Text exclusions:
+                          1. primary and secondary phone are blank
+                          2. deceased
+
+
+ =============================================================================================================================================
+ SUMMARY OF CHANGES
+ Date (yyyy-mm-dd)		Author				Comments
+ ---------------------------------------------------------------------------------------------------------------------------------------------
+
+ ==============================================================================================================================================*/
 
 IF OBJECT_ID('Dunham.pcm.contact_stage') IS NULL
 
@@ -156,11 +153,12 @@ USING(
       END*/
       NULL as [title],
 
-			CASE
+			/*CASE
         WHEN [contact_individuals_last_name] IS NULL
         THEN NULL
         ELSE CAST([contact_individuals_last_name] as varchar(max))
-      END as [last_name],
+      END*/
+      NULL as [last_name],
 
 			CASE
         WHEN [contact_individuals_first_name] IS NULL
@@ -201,21 +199,29 @@ USING(
       NULL as [address_line_3],
 
 			CASE
-        WHEN [contact_addresses_city] is null
-        THEN null
-        ELSE CAST([contact_addresses_city] as varchar(max))
+        WHEN [global_city] IS NULL
+          AND [contact_addresses_city] IS NOT NULL
+        THEN CAST([contact_addresses_city] as varchar(max))
+        WHEN [global_city] IS NULL
+          AND [contact_addresses_city] IS NULL
+        THEN NULL
+        ELSE CAST([global_city] as varchar(max))
       END as [city],
 
       CASE
-        WHEN [admin_name_2] is null
-        THEN null
-        ELSE CAST([admin_name_2] as varchar(max))
+        WHEN [global_county] IS NULL
+        THEN NULL
+        ELSE CAST([global_county] as varchar(max))
       END as [county],
 
       CASE
-        WHEN [contact_addresses_state] is null
-        THEN null
-        ELSE CAST([contact_addresses_state] as varchar(max))
+        WHEN [global_state] IS NULL
+          AND [contact_addresses_state] IS NOT NULL
+        THEN CAST([contact_addresses_state] as varchar(max))
+        WHEN [global_state] IS NULL
+          AND [contact_addresses_state] IS NULL
+        THEN NULL
+        ELSE CAST([global_state] as varchar(max))
       END as [state],
 
 			CASE
@@ -225,15 +231,19 @@ USING(
       END as [postal],
 
       CASE
-        WHEN [contact_addresses_country] is null
-        THEN null
-        ELSE CAST([contact_addresses_country] as varchar(max))
+        WHEN [country_code] IS NULL
+          AND [contact_addresses_country] IS NOT NULL
+        THEN CAST([contact_addresses_country] as varchar(max))
+        WHEN [country_code] IS NULL
+          AND [contact_addresses_country] IS NULL
+        THEN NULL
+        ELSE CAST([country_code] as varchar(max))
       END as [country],
 
       CASE
-        WHEN [dma_name] is null
+        WHEN [global_dma] IS NULL
         THEN NULL
-        ELSE CAST([dma_name] as varchar(max))
+        ELSE CAST([global_dma] as varchar(max))
       END as [dma],
 
       CASE
@@ -269,6 +279,11 @@ USING(
         WHEN [primary_email] IS NULL
           AND [secondary_email] IS NOT NULL
         THEN NULL
+
+        /*removes secondary email duplication if secondary email is equivalent to primary email*/
+        WHEN LOWER([primary_email]) = LOWER([secondary_email])
+        THEN NULL
+
         ELSE CAST(LOWER([secondary_email]) as varchar(max))
       END as [secondary_email],
 
@@ -285,10 +300,16 @@ USING(
       CASE
         WHEN [secondary_phone] IS NULL
         THEN NULL
+
         /*removes secondary phone duplication when secondary phone inserted into primary phone*/
         WHEN [primary_phone] IS NULL
           AND [secondary_phone] IS NOT NULL
         THEN NULL
+
+        /*removes secondary phone duplication when secondary phone is equivalent to primary phone*/
+        WHEN [primary_phone] = [secondary_phone]
+        THEN NULL
+
         ELSE CAST([secondary_phone] as varchar(max))
       END as [secondary_phone],
 
@@ -338,26 +359,27 @@ USING(
 			CASE
         WHEN [custom_fields_we_p_2_g_score] IS NULL
         THEN NULL
+
+        /*auto formatting p2g score for consistencies in field*/
         WHEN CHARINDEX('|', [custom_fields_we_p_2_g_score]) = 0
         THEN CAST(CONCAT(LEFT([custom_fields_we_p_2_g_score],1),'|',RIGHT([custom_fields_we_p_2_g_score],1)) as varchar(max))
+
         ELSE CAST([custom_fields_we_p_2_g_score] as varchar(max))
       END as [gift_score],
-
 
     /*end donor advancement specific columns*/
 
       /*custom by client, may contain true/false or date; output as bit/boolean
         default script assumes date entry*/
-			/*CASE
+			CASE
         WHEN [contact_individuals_is_deceased] = 1
         THEN 1
         ELSE 0
-      END*/
-      0 as [deceased],
+      END as [deceased],
 
     /*start custom communication eligibility fields - default AUS exclusions in script*/
 
-    /*default client appeal mailing exclusions*/
+		/*default client appeal mailing exclusions*/
 			CASE
 
       /*excludes blank addresses*/
@@ -365,11 +387,15 @@ USING(
         THEN 0
 
         /*excludes foreign addresses - US*/
-				WHEN [contact_addresses_country] is not null
-          AND (UPPER([contact_addresses_country])<>'US'
-            AND UPPER([contact_addresses_country])<>'USA'
-            AND UPPER([contact_addresses_country])<>'UNITED STATES'
-            AND UPPER([contact_addresses_country])<>'UNITED STATES OF AMERICA')
+        WHEN [country_code] IS NOT NULL
+          AND (UPPER([country_code]) <> 'US')
+        THEN 0
+        WHEN [country_code] IS NULL
+          AND [contact_addresses_country] IS NOT NULL
+          AND (UPPER([contact_addresses_country]) <> 'US'
+                AND UPPER([contact_addresses_country]) <> 'USA'
+                AND UPPER([contact_addresses_country]) <> 'UNITED STATES'
+                AND UPPER([contact_addresses_country]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -379,6 +405,7 @@ USING(
         /*custom appeal exclusions*/
         WHEN CHARINDEX('Do not mail', [custom_fields_communication_preference])>0
         THEN 0
+
 				ELSE 1
 			END as [appeal_eligible],
 
@@ -390,11 +417,15 @@ USING(
         THEN 0
 
         /*excludes foreign addresses - US*/
-        WHEN [contact_addresses_country] is not null
-          AND (UPPER([contact_addresses_country])<>'US'
-            AND UPPER([contact_addresses_country])<>'USA'
-            AND UPPER([contact_addresses_country])<>'UNITED STATES'
-            AND UPPER([contact_addresses_country])<>'UNITED STATES OF AMERICA')
+        WHEN [country_code] IS NOT NULL
+          AND (UPPER([country_code]) <> 'US')
+        THEN 0
+        WHEN [country_code] IS NULL
+          AND [contact_addresses_country] IS NOT NULL
+          AND (UPPER([contact_addresses_country]) <> 'US'
+                AND UPPER([contact_addresses_country]) <> 'USA'
+                AND UPPER([contact_addresses_country]) <> 'UNITED STATES'
+                AND UPPER([contact_addresses_country]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -406,6 +437,7 @@ USING(
         THEN 0
         WHEN CHARINDEX('Newsletter Opt-in', [custom_fields_communication_preference])>0
         THEN 1
+
 				ELSE 1
 			END as [newsletter_eligible],
 
@@ -414,7 +446,7 @@ USING(
 
         /*excludes blank primary and secondary emails*/
 				WHEN [primary_email] IS NULL
-          OR [secondary_email] IS NULL
+				 	AND [secondary_email] IS NULL
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -424,6 +456,7 @@ USING(
         /*custom email exclusions*/
         WHEN CHARINDEX('Do not email', [custom_fields_communication_preference])>0
         THEN 0
+
 				ELSE 1
 			END as [email_eligible],
 
@@ -432,7 +465,7 @@ USING(
 
         /*excludes blank primary and secondary phones*/
 				WHEN [primary_phone] IS NULL
-				 	OR [secondary_phone] IS NULL
+				 	AND [secondary_phone] IS NULL
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -499,30 +532,37 @@ USING(
 
 	 FROM [Dunham].[pcm].[contact] c
 
-/*joins gift table for recurring indicator*/
+   /*joins gift table for recurring indicator*/
 
-   LEFT JOIN (
-     SELECT DISTINCT contact_id,
-     1 as [is_recurring]
-     FROM Dunham.pcm.gift
-     where [recurring_gift_payments_gift_contact_id] is not null
-   ) g on g.[contact_id] = c.[id]
+      LEFT JOIN (
+        SELECT DISTINCT contact_id,
+        1 as [is_recurring]
+        FROM Dunham.pcm.gift
+        where [recurring_gift_payments_gift_contact_id] is not null
+      ) g on g.[contact_id] = c.[id]
 
-/*joins standardized address information on zip codes*/
+   /*joins standardized address information on zip codes*/
 
-  LEFT JOIN (
-    SELECT CAST(postal_code as varchar(max)) as postal_code,
-           country_code,
-           place_name,
-           admin_code_1,
-           admin_name_2,
-           latitude,
-           longitude,
-           name as dma_name
-    FROM Dunham.geo.us_postal_codes_to_markets
+      LEFT JOIN (
+      SELECT
+             CAST([postal_code] as varchar(max)) as postal_code
+          	,[country_code]
+            ,[place_name] as [global_city]
+            ,[admin_code_1] as [global_state]
+            ,[admin_name_2] as [global_county]
+            ,[latitude]
+            ,[longitude]
+	  FROM [Dunham].[geo].[geonames_postal_code_all]
+	  ) geo on (geo.[postal_code] = LEFT(c.[contact_addresses_postal],5) and geo.[country_code] = c.[contact_addresses_country])
 
-  ) geo ON geo.postal_code = c.[contact_addresses_postal]
+  /*joins DMA to address information*/
 
+		LEFT JOIN (
+    		SELECT
+    			CAST([postal_code] as varchar(max)) as [us_postal],
+    			[name] as [global_dma]
+    		FROM [Dunham].[geo].[us_postal_codes_to_markets]
+		) us ON us.[us_postal] = LEFT([contact_addresses_postal],5)
 
 
    WHERE [id] IS NOT NULL and ([is_archived]<>1 or [is_archived] is null)) AS source
