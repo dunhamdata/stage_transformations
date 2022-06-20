@@ -204,7 +204,7 @@ USING(
         WHEN [global_city] IS NULL
           AND [insert_city] IS NULL
         THEN NULL
-        ELSE CAST([place_name] as varchar(max))
+        ELSE CAST([global_city] as varchar(max))
       END*/
       NULL as [city],
 
