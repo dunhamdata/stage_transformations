@@ -651,35 +651,24 @@ USING(
    /*joins standardized address information on zip codes*/
 
       LEFT JOIN (
-      SELECT
-             [country_code]
-            ,postal_code
-            ,[global_city]
-            ,[global_state]
-            ,[global_county]
-            ,[latitude]
-            ,[longitude]
-            ,[global_dma]
-            FROM (
-          	  SELECT DISTINCT
-                      CAST([postal_code] as varchar(max)) as postal_code
-          			      ,[country_code]
-                      ,[place_name] as [global_city]
-                      ,[admin_code_1] as [global_state]
-                      ,[admin_name_2] as [global_county]
-                      ,[latitude]
-                      ,[longitude]
-                      ,[us_dma] as [global_dma]
-          			,ROW_NUMBER() OVER (PARTITION BY postal_code ORDER BY country_code DESC) as row_id
-                 FROM [Dunham].[geo].[geonames_postal_code_all]
-                 LEFT JOIN (
-                 SELECT
-                       CAST([postal_code] as varchar(max)) as [us_postal],
-                       [name] as [us_dma]
-                   FROM [Dunham].[geo].[us_postal_codes_to_markets]
-                 ) us ON us.[us_postal] = [postal_code]) a
-          	   where row_id = 1
-      ) geo on geo.[postal_code] = c.[zip_code]
+        SELECT
+               CAST([postal_code] as varchar(max)) as postal_code
+            	,[country_code]
+              ,[place_name] as [global_city]
+              ,[admin_code_1] as [global_state]
+              ,[admin_name_2] as [global_county]
+              ,[latitude]
+              ,[longitude]
+  	     FROM [Dunham].[geo].[geonames_postal_code_all]
+	  ) geo on geo.[postal_code] = LEFT(c.[zip_code],5) and geo.[country_code] = c.[country_code]
+
+		LEFT JOIN (
+    		SELECT
+    			CAST([postal_code] as varchar(max)) as [us_postal],
+    			[name] as [global_dma]
+    		FROM [Dunham].[geo].[us_postal_codes_to_markets]
+		) us ON us.[us_postal] = LEFT([zip_code],5)
+
 
    WHERE [donor_id] IS NOT NULL) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
