@@ -550,7 +550,7 @@ USING(
                       CAST([postal_code] as varchar(max)) as postal_code
           			      ,[country_code]
                       ,[place_name] as [global_city]
-                      ,[admin_name_1] as [global_state]
+                      ,[admin_code_1] as [global_state]
                       ,[admin_name_2] as [global_county]
                       ,[latitude]
                       ,[longitude]
