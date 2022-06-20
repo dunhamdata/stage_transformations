@@ -1,65 +1,66 @@
 /*===========================================================================================================================================
  Procedure:   acl contact transformation
- Create date: 2022-05-16
+ Create date: 2022-06-16
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[acl].[contact]
+ Parameter(s): [Dunham].[acl].[contact], [Dunham].[geo].[sa_3_2016_aust], [Dunham].[geo].[geonames_postal_code_all]
  Return Value(s): [Dunham].[acl].[contact_stage]
  Programming Notes:
 
-      **Only rows with a ID will be brought in for analysis
+ **Only rows with a ID will be brought in for analysis
 
-                Contact Type:
-                1. Non-donating Petitioner: when tagged with 'petition' and [is_supporter] is false
-                2. Donating Petitioner: when tagged with 'petition' and [is_supporter] is true
-                3. Regular Donor: none of the above are true
+           Contact Type:
+           1. Non-donating Petitioner: when tagged with 'petition' and [is_supporter] is false
+           2. Donating Petitioner: when tagged with 'petition' and [is_supporter] is true
+           3. Regular Donor: none of the above are true
 
-                Demographic Columns:
-                1. Gender
-                2. Age
-                3. Marital Status
-                4. Religion
-                5. Ethnicity
+           Demographic Columns:
+           1. Gender
+           2. Age
+           3. Marital Status
+           4. Religion
+           5. Ethnicity
 
 
- Exclusions:
-                Appeal exclusions:
-                1. address is blank
-                2. foreign address
-                3. deceased
-              CUSTOM EXCLUSIONS:
-                4. [is_supporter] is false
-                5. tag includes 'Do not contact', 'Do not mail', 'DoNot Mail', 'IF_DonorExclList', 'No mail',
-                    'no address', 'no finacial requests', 'no mail to postal address'
-                6. [do_not_contact] is true
+Exclusions:
+           Appeal exclusions:
+           1. address is blank
+           2. foreign address
+           3. deceased
+         CUSTOM EXCLUSIONS:
+           4. [is_supporter] is false
+           5. tag includes 'Do not contact', 'Do not mail', 'DoNot Mail', 'IF_DonorExclList', 'No mail',
+               'no address', 'no finacial requests', 'no mail to postal address'
+           6. [do_not_contact] is true
 
-                Newsletter exclusions:
-                1. address is blank
-                2. foreign address
-                3. deceased
-              CUSTOM EXCLUSIONS:
-                4. [is_supporter] is false
-                5. tag includes 'Do not contact', 'Do not mail', 'DoNot Mail', 'IF_DonorExclList', 'No mail',
-                    'no address', 'no finacial requests', 'no mail to postal address'
-                6. [do_not_contact] is true
+           Newsletter exclusions:
+           1. address is blank
+           2. foreign address
+           3. deceased
+         CUSTOM EXCLUSIONS:
+           4. [is_supporter] is false
+           5. tag includes 'Do not contact', 'Do not mail', 'DoNot Mail', 'IF_DonorExclList', 'No mail',
+               'no address', 'no finacial requests', 'no mail to postal address'
+           6. [do_not_contact] is true
 
-                Email exclusions:
-                1. primary and secondary email are blank
-                2. deceased
-              CUSTOM EXCLUSIONS:
-                3. [is_supporter] is false
-                4. tag includes 'Do not contact', 'IF_DonorExclList', 'no finacial requests'
-                5. email_opt_in is false
-                6. [do_not_contact] is true
-                7. if email_1_is_bad and email_2_is_bad is true
+           Email exclusions:
+           1. primary and secondary email are blank
+           2. deceased
+         CUSTOM EXCLUSIONS:
+           3. [is_supporter] is false
+           4. tag includes 'Do not contact', 'IF_DonorExclList', 'no finacial requests'
+           5. email_opt_in is false
+           6. [do_not_contact] is true
+           7. if email_1_is_bad and email_2_is_bad is true
 
-                Text exclusions:
-                1. primary and secondary phone are blank
-                2. deceased
-              CUSTOM EXCLUSIONS:
-                3. [is_supporter] is false
-                4. tag includes 'Do not contact', 'IF_DonorExclList', 'no finacial requests'
-                5. [do_not_contact] is true
+           Text exclusions:
+           1. primary and secondary phone are blank
+           2. deceased
+         CUSTOM EXCLUSIONS:
+           3. [is_supporter] is false
+           4. tag includes 'Do not contact', 'IF_DonorExclList', 'no finacial requests'
+           5. [do_not_contact] is true
+
 
  =============================================================================================================================================
  SUMMARY OF CHANGES
@@ -85,9 +86,13 @@ CREATE TABLE [acl].[contact_stage](
     [address_line_2] [varchar](max) NULL,
     [address_line_3] [varchar](max) NULL,
     [city] [varchar](max) NULL,
+    [county] [varchar](max) NULL,
     [state] [varchar](max) NULL,
     [postal] [varchar](max) NULL,
     [country] [varchar](max) NULL,
+    [dma] [varchar](max) NULL,
+    [latitude] [float] NULL,
+    [longitude] [float] NULL,
     [primary_email] [varchar](max) NULL,
     [secondary_email] [varchar](max) NULL,
     [primary_phone] [varchar](max) NULL,
@@ -129,9 +134,8 @@ USING(
       CAST([nationbuilder_id] as varchar(200)) as [pk_constituent_id],
 
 			CASE
-        WHEN LEN([care_of_organisation])<=0
-          OR [care_of_organisation] IS NULL
-        THEN NULL
+        WHEN [care_of_organisation] IS NULL
+        THEN CAST([full_name] as varchar(max))
         ELSE CAST([care_of_organisation] as varchar(max))
       END as [company_name],
 
@@ -146,184 +150,205 @@ USING(
 
       /*this field is used to personalize communications*/
 			CASE
-        WHEN LEN([full_name])<=0
-          OR [full_name] IS NULL
-        THEN NULL
-        ELSE CAST([full_name] as varchar(max))
+        WHEN [care_of_firstname] IS NULL
+        THEN 'Friend'
+        ELSE CAST([care_of_firstname] as varchar(max))
       END as [salutation],
 
       /*this field is used to personalize envelopes*/
-			/*CASE
-        WHEN LEN([insert_addressee])<=0
-          OR [insert_addressee] IS NULL
-        THEN NULL
-        ELSE CAST([insert_addressee] as varchar(max))
-      END*/
-      NULL as [addressee],
+			CASE
+        WHEN [care_of_organisation] IS NULL
+        THEN CAST([full_name] as varchar(max))
+        ELSE CAST([care_of_organisation] as varchar(max))
+      END as [addressee],
 
 			CASE
-        WHEN LEN([care_of_prefix])<=0
-          OR [care_of_prefix] IS NULL
-        THEN NULL
+        WHEN [care_of_prefix] IS NULL
+        THEN CAST([prefix] as varchar(max))
         ELSE CAST([care_of_prefix] as varchar(max))
       END as [title],
 
 			CASE
-        WHEN LEN([care_of_lastname])<=0
-          OR [care_of_lastname] IS NULL
-        THEN NULL
+        WHEN [care_of_lastname] IS NULL
+        THEN CAST([last_name] as varchar(max))
         ELSE CAST([care_of_lastname] as varchar(max))
       END as [last_name],
 
 			CASE
-        WHEN LEN([care_of_firstname])<=0
-          OR [care_of_firstname] IS NULL
-        THEN NULL
+        WHEN [care_of_firstname] IS NULL
+        THEN CAST([first_name] as varchar(max))
         ELSE CAST([care_of_firstname] as varchar(max))
       END as [first_name],
 
 			CASE
-        WHEN LEN([suffix])<=0
-          OR [suffix] IS NULL
+        WHEN [suffix] IS NULL
         THEN NULL
         ELSE CAST([suffix] as varchar(max))
       END as [suffix],
 
 			CASE
-				WHEN LEN([created_at])<=0
-          OR [created_at] IS NULL
+				WHEN [created_at] IS NULL
         THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
 				ELSE CAST([created_at] as datetime2)
 			END as [account_created_date],
 
 			CASE
-        WHEN LEN([mailing_address_1])<=0
-          OR [mailing_address_1] IS NULL
+        WHEN [mailing_address_1] IS NULL
         THEN NULL
         ELSE CAST([mailing_address_1] as varchar(max))
       END as [address_line_1],
 
 			CASE
-        WHEN LEN([mailing_address_2])<=0
-          OR [mailing_address_2] IS NULL
+        WHEN [mailing_address_2] IS NULL
         THEN NULL
         ELSE CAST([mailing_address_2] as varchar(max))
       END as [address_line_2],
 
       CASE
-        WHEN LEN([mailing_address_3])<=0
-          OR [mailing_address_3] IS NULL
+        WHEN [mailing_address_3] IS NULL
         THEN NULL
         ELSE CAST([mailing_address_3] as varchar(max))
       END as [address_line_3],
 
 			CASE
-        WHEN LEN([mailing_city])<=0
-          OR [mailing_city] IS NULL
+        WHEN [global_city] IS NULL
+          AND [mailing_city] IS NOT NULL
+        THEN CAST([mailing_city] as varchar(max))
+        WHEN [global_city] IS NULL
+          AND [mailing_city] IS NULL
         THEN NULL
-        ELSE CAST([mailing_city] as varchar(max))
+        ELSE CAST([global_city] as varchar(max))
       END as [city],
 
-			CASE
-        WHEN LEN([mailing_state])<=0
-          OR [mailing_state] IS NULL
+      CASE
+        WHEN [global_county] IS NULL
         THEN NULL
-        ELSE CAST([mailing_state] as varchar(max))
+        ELSE CAST([global_county] as varchar(max))
+      END as [county],
+
+      CASE
+        WHEN [global_state] IS NULL
+          AND [mailing_state] IS NOT NULL
+        THEN CAST([mailing_state] as varchar(max))
+        WHEN [global_state] IS NULL
+          AND [mailing_state] IS NULL
+        THEN NULL
+        ELSE CAST([global_state] as varchar(max))
       END as [state],
 
 			CASE
-        WHEN LEN([mailing_zip])<=0
-          OR [mailing_zip] IS NULL
+        WHEN [mailing_zip] IS NULL
         THEN NULL
         ELSE CAST(LEFT([mailing_zip],5) as varchar(max))
       END as [postal],
 
-			CASE
-        WHEN LEN([mailing_country])<=0
-          OR [mailing_country] IS NULL
+      CASE
+        WHEN [country_code] IS NULL
+          AND [mailing_country] IS NOT NULL
+        THEN CAST([mailing_country] as varchar(max))
+        WHEN [country_code] IS NULL
+          AND [mailing_country] IS NULL
         THEN NULL
-        ELSE CAST([mailing_country] as varchar(max))
+        ELSE CAST([country_code] as varchar(max))
       END as [country],
+
+      CASE
+        WHEN [global_dma] IS NULL
+        THEN NULL
+        ELSE CAST([global_dma] as varchar(max))
+      END as [dma],
+
+      CASE
+        WHEN [latitude] IS NULL
+        THEN NULL
+        ELSE CAST([latitude] as float)
+      END as [latitude],
+
+      CASE
+      WHEN [longitude] IS NULL
+      THEN NULL
+      ELSE CAST([longitude] as float)
+      END as [longitude],
 
       /*inserts secondary_email if primary_email is blank
         casting all emails in lower-case characters for modeling*/
 
 			CASE
-        WHEN (LEN([email])<=0
-            OR [email] IS NULL)
-          AND LEN([email_1])>0
+        WHEN [email] IS NULL
+          AND [email_1] IS NOT NULL
         THEN CAST(LOWER([email_1]) as varchar(max))
-				WHEN LEN([email])<=0
-          OR [email] IS NULL
+				WHEN [email] IS NULL
         THEN NULL
 			  ELSE CAST(LOWER([email]) as varchar(max))
       END as [primary_email],
 
       /*casting all emails in lower-case characters for modeling*/
 			CASE
-        WHEN LEN([email_1])<=0
-          OR [email_1] IS NULL
+        WHEN [email_1] IS NULL
         THEN NULL
 
         /*removes secondary email duplication if secondary email inserted into primary email*/
-        WHEN (LEN([email])<=0
-            OR [email] IS NULL)
-          AND LEN([email_1])>0
+        WHEN [email] IS NULL
+          AND [email_1] IS NOT NULL
         THEN NULL
+
+        /*removes secondary email duplication if secondary email is equivalent to primary email*/
+        WHEN LOWER([email]) = LOWER([email_1])
+        THEN NULL
+
         ELSE CAST(LOWER([email_1]) as varchar(max))
       END as [secondary_email],
 
       /*inserts secondary_phone as primary_phone if primary_phone is blank*/
 			CASE
-				WHEN (LEN([phone_number])<=0
-            OR [phone_number] IS NULL)
-          AND LEN([work_phone_number])>0
+				WHEN [phone_number] IS NULL
+          AND [work_phone_number] IS NOT NULL
         THEN CAST([work_phone_number] as varchar(max))
-				WHEN LEN([phone_number])<=0
-          OR [phone_number] IS NULL
+				WHEN [phone_number] IS NULL
         THEN NULL
 				ELSE CAST([phone_number] as varchar(max))
 			END as [primary_phone],
 
       CASE
-        WHEN LEN([work_phone_number])<=0
-          OR [work_phone_number] IS NULL
+        WHEN [work_phone_number] IS NULL
         THEN NULL
+
         /*removes secondary phone duplication when secondary phone inserted into primary phone*/
-        WHEN (LEN([phone_number])<=0
-            OR [phone_number] IS NULL)
-          AND LEN([work_phone_number])>0
+        WHEN [phone_number] IS NULL
+          AND [work_phone_number] IS NOT NULL
         THEN NULL
+
+        /*removes secondary phone duplication when secondary phone is equivalent to primary phone*/
+        WHEN [phone_number] = [work_phone_number]
+        THEN NULL
+
         ELSE CAST([work_phone_number] as varchar(max))
       END as [secondary_phone],
 
 			CASE
-        WHEN LEN([tag_list])<=0
-          OR [tag_list] IS NULL
+        WHEN [tag_list] IS NULL
         THEN NULL
         ELSE CAST([tag_list] as varchar(max))
       END as [tags],
 
   /*start donor advancement specific data fields for filters*/
-			CASE
-        WHEN LEN([membership_names])<=0
-          OR [membership_names] IS NULL
+			/*CASE
+        WHEN [membership_names] IS NULL
         THEN NULL
         ELSE CAST([membership_names] as varchar(max))
-      END as [portfolio],
+      END*/
+      NULL as [portfolio],
 
       /*identification, cultivation, solicitation, or stewardship designation*/
 			CASE
-        WHEN LEN([donor_stage])<=0
-          OR [donor_stage] IS NULL
+        WHEN [donor_stage] IS NULL
         THEN NULL
         ELSE CAST([donor_stage] as varchar(max))
       END as [gift_stage],
 
       /*gift capacity range - should display $ amount range*/
 			/*CASE
-        WHEN LEN([insert_gift_range])<=0
-          OR [insert_gift_range] IS NULL
+        WHEN [insert_gift_range] IS NULL
         THEN NULL
         ELSE CAST([insert_gift_range] as varchar(max))
       END*/
@@ -331,8 +356,7 @@ USING(
 
       /*gift capacity score - should display # correlated to [gift_range]*/
 			/*CASE
-        WHEN LEN([insert_gift_rating])<=0
-          OR [insert_gift_rating] IS NULL
+        WHEN [insert_gift_rating] IS NULL
         THEN NULL
         ELSE CAST([insert_gift_rating] as varchar(max))
       END*/
@@ -340,8 +364,7 @@ USING(
 
       /*wealth score - score generated by WE*/
       /*CASE
-        WHEN LEN([insert_wealth_score])<=0
-          OR [insert_wealth_score] IS NULL
+        WHEN [insert_wealth_score] IS NULL
         THEN NULL
         ELSE CAST([insert_wealth_score] as varchar(max))
       END*/
@@ -349,14 +372,17 @@ USING(
 
       /*WE p2g score = gift_score; formats p2g if '|' not found*/
 			/*CASE
-        WHEN LEN([insert_gift_score])<=0
-          OR [insert_gift_score] IS NULL
+        WHEN [insert_gift_score] IS NULL
         THEN NULL
+
+        /*auto formatting p2g score for consistencies in field*/
         WHEN CHARINDEX('|', [insert_gift_score]) = 0
         THEN CAST(CONCAT(LEFT([insert_gift_score],1),'|',RIGHT([insert_gift_score],1)) as varchar(max))
+
         ELSE CAST([insert_gift_score] as varchar(max))
       END*/
       NULL as [gift_score],
+
     /*end donor advancement specific columns*/
 
       /*custom by client, may contain true/false or date; output as bit/boolean
@@ -373,15 +399,18 @@ USING(
 			CASE
 
       /*excludes blank addresses*/
-				WHEN LEN([mailing_address_1])<=0
-          OR [mailing_address_1] IS NULL
+				WHEN [mailing_address_1] IS NULL
         THEN 0
 
         /*excludes foreign addresses - AUS*/
-				WHEN LEN([mailing_country])>0
-          AND (UPPER([mailing_country])<>'AUS'
-            AND UPPER([mailing_country])<>'AU'
-            AND UPPER([mailing_country])<>'AUSTRALIA')
+				WHEN [country_code] IS NOT NULL
+          AND (UPPER([country_code]) <> 'AU')
+        THEN 0
+        WHEN [country_code] IS NULL
+          AND [mailing_country] IS NOT NULL
+          AND (UPPER([mailing_country]) <> 'AU'
+                AND UPPER([mailing_country]) <> 'AUS'
+                AND UPPER([mailing_country]) <> 'AUSTRALIA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -412,15 +441,18 @@ USING(
       CASE
 
       /*excludes blank addresses*/
-				WHEN LEN([mailing_address_1])<=0
-          OR [mailing_address_1] IS NULL
+				WHEN [mailing_address_1] IS NULL
         THEN 0
 
         /*excludes foreign addresses - AUS*/
-				WHEN LEN([mailing_country])>0
-          AND (UPPER([mailing_country])<>'AUS'
-            AND UPPER([mailing_country])<>'AU'
-            AND UPPER([mailing_country])<>'AUSTRALIA')
+        WHEN [country_code] IS NOT NULL
+          AND (UPPER([country_code]) <> 'AU')
+        THEN 0
+        WHEN [country_code] IS NULL
+          AND [mailing_country] IS NOT NULL
+          AND (UPPER([mailing_country]) <> 'AU'
+                AND UPPER([mailing_country]) <> 'AUS'
+                AND UPPER([mailing_country]) <> 'AUSTRALIA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -445,16 +477,14 @@ USING(
         THEN 0
 
 				ELSE 1
-			END  as [newsletter_eligible],
+			END as [newsletter_eligible],
 
 		/*default client email communication exclusions*/
 			CASE
 
         /*excludes blank primary and secondary emails*/
-				WHEN (LEN([email])<=0
-            OR [email] IS NULL)
-				 	AND (LEN([email_1])<=0
-            OR [email_1] IS NULL)
+				WHEN [email] IS NULL
+				 	AND [email_1] IS NULL
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -486,10 +516,8 @@ USING(
 			CASE
 
         /*excludes blank primary and secondary phones*/
-				WHEN (LEN([phone_number])<=0
-            OR [phone_number] IS NULL)
-				 	AND (LEN([work_phone_number])<=0
-            OR [work_phone_number] IS NULL)
+				WHEN [phone_number] IS NULL
+				 	AND [work_phone_number] IS NULL
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -514,7 +542,6 @@ USING(
       /*only used when multiple CRM's are used to create data files*/
       /*CASE
         WHEN [insert_crm] IS NULL
-          OR LEN([insert_crm)<=0
         THEN NULL
         ELSE CAST([insert_crm] as varchar(50))
       END*/
@@ -523,9 +550,8 @@ USING(
   /*custom demographic data columns to populate audience report*/
       CASE
         WHEN [sex] IS NULL
-          OR LEN([sex])<=0
         THEN NULL
-        ELSE CAST(UPPER([sex]) as varchar(50))
+        ELSE CAST([sex] as varchar(50))
       END as [demographic_1],
 
       CASE
@@ -579,7 +605,28 @@ USING(
 
 			UPPER('acl') as [client_acronym]
 
-	 FROM [Dunham].[acl].[contact]
+	 FROM [Dunham].[acl].[contact] c
+
+   /*joins standardized address information on zip codes*/
+
+      LEFT JOIN (
+        SELECT
+               [country_code]
+              ,CAST([postal_code] as varchar(max)) as [postal_code]
+              ,[place_name] as [global_city]
+              ,[admin_code_1] as [global_state]
+   		        ,[admin_name_1]
+              ,[admin_name_2] as [global_county]
+              ,[latitude]
+              ,[longitude]
+   		   ,[admin_name_2] as [global_dma]
+         FROM [Dunham].[geo].[geonames_postal_code_all]
+
+       ) geo on geo.[postal_code] = CAST(c.[primary_zip] as varchar(max))
+   		AND geo.[global_state] = c.[primary_state]
+   		AND geo.[global_city] = [primary_city]
+
+
    WHERE [nationbuilder_id] IS NOT NULL) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
 
@@ -599,9 +646,13 @@ USING(
          [address_line_2],
          [address_line_3],
          [city],
+         [county],
          [state],
          [postal],
          [country],
+         [dma],
+         [latitude],
+         [longitude],
          [primary_email],
          [secondary_email],
          [primary_phone],
@@ -647,9 +698,13 @@ USING(
          source.[address_line_2],
          source.[address_line_3],
          source.[city],
+         source.[county],
          source.[state],
          source.[postal],
          source.[country],
+         source.[dma],
+         source.[latitude],
+         source.[longitude],
          source.[primary_email],
          source.[secondary_email],
          source.[primary_phone],
@@ -703,9 +758,13 @@ USING(
          target.[address_line_2]=source.[address_line_2],
          target.[address_line_3]=source.[address_line_3],
          target.[city]=source.[city],
+         target.[county]=source.[county],
          target.[state]=source.[state],
          target.[postal]=source.[postal],
          target.[country]=source.[country],
+         target.[dma]=source.[dma],
+         target.[latitude]=source.[latitude],
+         target.[longitude]=source.[longitude],
          target.[primary_email]=source.[primary_email],
          target.[secondary_email]=source.[secondary_email],
          target.[primary_phone]=source.[primary_phone],
