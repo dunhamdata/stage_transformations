@@ -402,15 +402,14 @@ USING(
 
         /*excludes foreign addresses - AUS*/
 				WHEN [country_code] IS NOT NULL
-          AND (UPPER([country_code]) = 'AU')
-        THEN 1
+          AND (UPPER([country_code]) <> 'AU')
+        THEN 0
         WHEN [country_code] IS NULL
           AND [insert_country] IS NOT NULL
-          AND (UPPER([insert_country]) = 'AU'
-                OR UPPER([insert_country]) = 'AUS'
-                OR UPPER([insert_country]) = 'AUSTRALIA')
-        THEN 1
-
+          AND (UPPER([insert_country]) <> 'AU'
+                OR UPPER([insert_country]) <> 'AUS'
+                OR UPPER([insert_country]) <> 'AUSTRALIA')
+        THEN 0
 
         /*excludes deceased - default as date entry*/
         WHEN [insert_deceased_date] IS NOT NULL
@@ -428,14 +427,14 @@ USING(
 
         /*excludes foreign addresses - AUS*/
         WHEN [country_code] IS NOT NULL
-          AND (UPPER([country_code]) = 'AU')
-        THEN 1
+          AND (UPPER([country_code]) <> 'AU')
+        THEN 0
         WHEN [country_code] IS NULL
           AND [insert_country] IS NOT NULL
-          AND (UPPER([insert_country]) = 'AU'
-                OR UPPER([insert_country]) = 'AUS'
-                OR UPPER([insert_country]) = 'AUSTRALIA')
-        THEN 1
+          AND (UPPER([insert_country]) <> 'AU'
+                OR UPPER([insert_country]) <> 'AUS'
+                OR UPPER([insert_country]) <> 'AUSTRALIA')
+        THEN 0
 
         /*excludes deceased - default as date entry*/
         WHEN [insert_deceased_date] IS NOT NULL
