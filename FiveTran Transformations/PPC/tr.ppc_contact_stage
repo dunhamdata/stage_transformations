@@ -374,8 +374,7 @@ USING(
         THEN 0
 
         /*excludes deceased - default as date entry*/
-        WHEN [contact_individuals_is_deceased] IS NOT NULL
-          OR LEN([contact_individuals_is_deceased])>0
+        WHEN [contact_individuals_is_deceased] = 1
         THEN 0
 
         /*custom appeal eligibility*/
@@ -404,8 +403,7 @@ USING(
         THEN 0
 
         /*excludes deceased - default as date entry*/
-        WHEN [contact_individuals_is_deceased] IS NOT NULL
-          OR LEN([contact_individuals_is_deceased])>0
+        WHEN [contact_individuals_is_deceased] = 1
         THEN 0
 
         /*custom newsletter eligibility*/
@@ -428,8 +426,7 @@ USING(
         THEN 0
 
         /*excludes deceased - default as date entry*/
-        WHEN [contact_individuals_is_deceased] IS NOT NULL
-          OR LEN([contact_individuals_is_deceased])>0
+        WHEN [contact_individuals_is_deceased] = 1
         THEN 0
 
         /*custom email eligibility*/
@@ -453,8 +450,7 @@ USING(
         THEN 0
 
         /*excludes deceased - default as date entry*/
-        WHEN [contact_individuals_is_deceased] IS NOT NULL
-          OR LEN([contact_individuals_is_deceased])>0
+        WHEN [contact_individuals_is_deceased] = 1
         THEN 0
 
         /*custom text eligibility*/
