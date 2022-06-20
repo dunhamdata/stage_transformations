@@ -399,9 +399,9 @@ USING(
         WHEN [country_code] IS NULL
           AND [billing_country] IS NOT NULL
           AND (UPPER([billing_country]) <> 'US'
-                OR UPPER([billing_country]) <> 'USA'
-                OR UPPER([billing_country]) <> 'UNITED STATES'
-                OR UPPER([billing_country]) <>'UNITED STATES OF AMERICA')
+                AND UPPER([billing_country]) <> 'USA'
+                AND UPPER([billing_country]) <> 'UNITED STATES'
+                AND UPPER([billing_country]) <>'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -424,9 +424,9 @@ USING(
         WHEN [country_code] IS NULL
           AND [billing_country] IS NOT NULL
           AND (UPPER([billing_country]) <> 'US'
-                OR UPPER([billing_country]) <> 'USA'
-                OR UPPER([billing_country]) <> 'UNITED STATES'
-                OR UPPER([billing_country]) <> 'UNITED STATES OF AMERICA')
+                AND UPPER([billing_country]) <> 'USA'
+                AND UPPER([billing_country]) <> 'UNITED STATES'
+                AND UPPER([billing_country]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/

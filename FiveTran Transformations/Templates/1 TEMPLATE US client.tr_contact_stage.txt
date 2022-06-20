@@ -407,9 +407,9 @@ USING(
         WHEN [country_code] IS NULL
           AND [insert_country] IS NOT NULL
           AND (UPPER([insert_country]) <> 'US'
-                OR UPPER([insert_country]) <> 'USA'
-                OR UPPER([insert_country]) <> 'UNITED STATES'
-                OR UPPER([insert_country]) <> 'UNITED STATES OF AMERICA')
+                AND UPPER([insert_country]) <> 'USA'
+                AND UPPER([insert_country]) <> 'UNITED STATES'
+                AND UPPER([insert_country]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -433,9 +433,9 @@ USING(
         WHEN [country_code] IS NULL
           AND [insert_country] IS NOT NULL
           AND (UPPER([insert_country]) <> 'US'
-                OR UPPER([insert_country]) <> 'USA'
-                OR UPPER([insert_country]) <> 'UNITED STATES'
-                OR UPPER([insert_country]) <> 'UNITED STATES OF AMERICA')
+                AND UPPER([insert_country]) <> 'USA'
+                AND UPPER([insert_country]) <> 'UNITED STATES'
+                AND UPPER([insert_country]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/

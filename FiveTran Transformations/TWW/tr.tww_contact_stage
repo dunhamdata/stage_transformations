@@ -431,9 +431,9 @@ USING(
         WHEN geo.[country_code] IS NULL
           AND c.[country_code] IS NOT NULL
           AND (UPPER(c.[country_code]) <> 'US'
-                OR UPPER(c.[country_code]) <> 'USA'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES OF AMERICA')
+                AND UPPER(c.[country_code]) <> 'USA'
+                AND UPPER(c.[country_code]) <> 'UNITED STATES'
+                AND UPPER(c.[country_code]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
 
@@ -489,9 +489,9 @@ USING(
         WHEN geo.[country_code] IS NULL
           AND c.[country_code] IS NOT NULL
           AND (UPPER(c.[country_code]) <> 'US'
-                OR UPPER(c.[country_code]) <> 'USA'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES OF AMERICA')
+                AND UPPER(c.[country_code]) <> 'USA'
+                AND UPPER(c.[country_code]) <> 'UNITED STATES'
+                AND UPPER(c.[country_code]) <> 'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
