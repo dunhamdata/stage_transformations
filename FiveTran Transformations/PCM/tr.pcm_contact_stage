@@ -153,12 +153,11 @@ USING(
       END*/
       NULL as [title],
 
-			/*CASE
+			CASE
         WHEN [contact_individuals_last_name] IS NULL
         THEN NULL
         ELSE CAST([contact_individuals_last_name] as varchar(max))
-      END*/
-      NULL as [last_name],
+      END as [last_name],
 
 			CASE
         WHEN [contact_individuals_first_name] IS NULL
