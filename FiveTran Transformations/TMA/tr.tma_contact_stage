@@ -401,7 +401,7 @@ USING(
           AND (UPPER([billing_country]) <> 'US'
                 OR UPPER([billing_country]) <> 'USA'
                 OR UPPER([billing_country]) <> 'UNITED STATES'
-                OR UPPER([billing_country]) =<>'UNITED STATES OF AMERICA')
+                OR UPPER([billing_country]) <>'UNITED STATES OF AMERICA')
         THEN 0
 
         /*excludes deceased - default as date entry*/
@@ -419,15 +419,15 @@ USING(
 
         /*excludes foreign addresses - US*/
         WHEN [country_code] IS NOT NULL
-          AND (UPPER([country_code]) = 'US')
-        THEN 1
+          AND (UPPER([country_code]) <> 'US')
+        THEN 0
         WHEN [country_code] IS NULL
           AND [billing_country] IS NOT NULL
-          AND (UPPER([billing_country]) = 'US'
-                OR UPPER([billing_country]) = 'USA'
-                OR UPPER([billing_country]) = 'UNITED STATES'
-                OR UPPER([billing_country]) = 'UNITED STATES OF AMERICA')
-        THEN 1
+          AND (UPPER([billing_country]) <> 'US'
+                OR UPPER([billing_country]) <> 'USA'
+                OR UPPER([billing_country]) <> 'UNITED STATES'
+                OR UPPER([billing_country]) <> 'UNITED STATES OF AMERICA')
+        THEN 0
 
         /*excludes deceased - default as date entry*/
         WHEN [npsp_deceased_c]=1
