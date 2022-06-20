@@ -426,15 +426,15 @@ USING(
 
         /*excludes foreign addresses - US*/
         WHEN geo.[country_code] IS NOT NULL
-          AND (UPPER(geo.[country_code])<>'US')
-        THEN 0
+          AND (UPPER(geo.[country_code]) = 'US')
+        THEN 1
         WHEN geo.[country_code] IS NULL
           AND c.[country_code] IS NOT NULL
-          AND (UPPER(c.[country_code]) <> 'US'
-                OR UPPER(c.[country_code]) <> 'USA'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES OF AMERICA')
-        THEN 0
+          AND (UPPER(c.[country_code]) = 'US'
+                OR UPPER(c.[country_code]) = 'USA'
+                OR UPPER(c.[country_code]) = 'UNITED STATES'
+                OR UPPER(c.[country_code]) = 'UNITED STATES OF AMERICA')
+        THEN 1
 
 
         /*excludes deceased - default as date entry*/
@@ -484,15 +484,15 @@ USING(
 
         /*excludes foreign addresses - US*/
         WHEN geo.[country_code] IS NOT NULL
-          AND (UPPER(geo.[country_code])<>'US')
-        THEN 0
+          AND (UPPER(geo.[country_code]) = 'US')
+        THEN 1
         WHEN geo.[country_code] IS NULL
           AND c.[country_code] IS NOT NULL
-          AND (UPPER(c.[country_code]) <> 'US'
-                OR UPPER(c.[country_code]) <> 'USA'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES'
-                OR UPPER(c.[country_code]) <> 'UNITED STATES OF AMERICA')
-        THEN 0
+          AND (UPPER(c.[country_code]) = 'US'
+                OR UPPER(c.[country_code]) = 'USA'
+                OR UPPER(c.[country_code]) = 'UNITED STATES'
+                OR UPPER(c.[country_code]) = 'UNITED STATES OF AMERICA')
+        THEN 1
 
         /*excludes deceased - default as date entry*/
         WHEN [deceased_date] IS NOT NULL
