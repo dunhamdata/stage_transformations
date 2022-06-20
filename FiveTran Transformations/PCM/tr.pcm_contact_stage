@@ -565,7 +565,7 @@ USING(
 		) us ON us.[us_postal] = LEFT([contact_addresses_postal],5)
 
 
-   WHERE [id] IS NOT NULL and ([is_archived]<>1 or [is_archived] is null)) AS source
+   WHERE [id] IS NOT NULL and ([is_archived] <> 1 or [is_archived] is null)) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
 
    /*inserts .contact rows that are not found in .contact_stage rows*/
