@@ -531,37 +531,24 @@ USING(
 
 	 FROM [Dunham].[insert_client].[contact] c
 
-/*joins standardized address information on zip codes*/
+   /*joins standardized address information on zip codes*/
 
-   LEFT JOIN (
-     SELECT
-            [country_code]
-           ,CAST([postal_code] as varchar(max)) as [postal_code]
-           ,[place_name] as [global_city]
-           ,[admin_code_1] as [global_state]
-           ,[admin_name_2] as [global_county]
-           ,[latitude]
-           ,[longitude]
-           ,[gccsa_name_2016] as [global_dma]
-     	     ,ROW_NUMBER() OVER (PARTITION BY postal_code ORDER BY country_code ASC) as row_id
-      FROM [Dunham].[geo].[geonames_postal_code_all]
-    ) geo on geo.[postal_code] = c.[insert_postal] AND geo.[country_code] = c.[insert_country]
-
-  /*adds gccsa name as dma and sa3 name as county*/
-    LEFT JOIN (
+      LEFT JOIN (
         SELECT
-              f.value as [AUS City]
-              ,[state_code_2016] as [AUS State]
-              ,[gccsa_name_2016] as [AUS DMA]
-          FROM [Dunham].[geo].[sa_3_2016_aust]
-          CROSS APPLY STRING_SPLIT([sa_3_name_2016],' ') as f
-          where charindex('(',[sa_3_name_2016])=0)
-          AND (f.value <> '-'
-            AND f.value <> 'North'
-            AND f.value <> 'South'
-            AND f.value <> 'East'
-            AND f.value <> 'West')
-    ) aus ON (aus.[AUS City] = [place_name] AND aus.[AUS State]=[admin_code_1])
+               [country_code]
+              ,CAST([postal_code] as varchar(max)) as [postal_code]
+              ,[place_name] as [global_city]
+              ,[admin_code_1] as [global_state]
+   		   ,[admin_name_1]
+              ,[admin_name_2] as [global_county]
+              ,[latitude]
+              ,[longitude]
+   		   ,[admin_name_2] as [global_dma]
+         FROM [Dunham].[geo].[geonames_postal_code_all]
+
+       ) geo on geo.[postal_code] = CAST(c.[primary_zip] as varchar(max))
+   		AND geo.[global_state] = c.[primary_state]
+   		AND geo.[global_city] = [primary_city]
 
 
    WHERE [insert_constituent_id] IS NOT NULL) AS source
