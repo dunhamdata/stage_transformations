@@ -129,7 +129,7 @@ USING(
 
         CASE
           WHEN [company_name] IS NULL
-          THEN NULL
+          THEN CAST([addressee] as varchar(max))
           ELSE CAST([company_name] as varchar(max))
         END as [company_name],
 
