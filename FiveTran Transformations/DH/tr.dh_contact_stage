@@ -415,7 +415,7 @@ USING(
           THEN 0
 
           /*CUSTOM EXCLUSIONS*/
-            WHEN [default_billing_address] = 'No'
+            WHEN [default_billing_address] <> 'Yes'
               OR [default_billing_address] IS NULL
             THEN 0
 
@@ -457,7 +457,7 @@ USING(
           THEN 0
 
           /*CUSTOM EXCLUSIONS*/
-            WHEN [default_billing_address] = 'No'
+            WHEN [default_billing_address] <> 'Yes'
               OR [default_billing_address] IS NULL
             THEN 0
 
