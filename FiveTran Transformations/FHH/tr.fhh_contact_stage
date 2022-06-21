@@ -625,7 +625,9 @@ USING(
                 ,[latitude]
                 ,[longitude]
         FROM [Dunham].[geo].[geonames_postal_code_all]
-        ) geo on (geo.[postal_code] = LEFT(c.[contact_addresses_postal],5) and geo.[country_code] = c.[contact_addresses_country])
+        ) geo on (geo.[postal_code] = LEFT(c.[contact_addresses_postal],5)
+        and UPPER(geo.[global_state]) = UPPER(c.[contact_addresses_state])
+        and UPPER(geo.[global_city]) = UPPER(c.[contact_addresses_city]))
 
         /*joins DMA to address information*/
 
