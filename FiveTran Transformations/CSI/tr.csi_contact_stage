@@ -15,7 +15,7 @@
            3. Regular Donor: if no primary_affiliation_c and recurring_donor_c=0
 
            Demographic Columns:
-           1. NULL
+           1. Age
            2. NULL
            3. NULL
            4. NULL
