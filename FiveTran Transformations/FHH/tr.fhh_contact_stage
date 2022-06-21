@@ -341,9 +341,9 @@ USING(
           END as [secondary_phone],
 
           CASE
-            WHEN [tags] IS NULL
-            THEN NULL
-            ELSE CAST([tags] as varchar(max))
+            WHEN [custom_fields_comms_preference] IS NULL
+            THEN [tags]
+            ELSE CAST([custom_fields_comms_preference] as varchar(max))
           END as [tags],
 
         /*start donor advancement specific data fields for filters*/
