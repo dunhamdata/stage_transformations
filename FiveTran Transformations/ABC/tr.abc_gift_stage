@@ -12,7 +12,7 @@
                 Gift Type:
                 1. Recurring Donation: if recurring_gift_payments_gift_id is not blank
                 2. Premium Donation: if gift_premiums_premium is not blank
-                3. Regular Donation: none of the above are true 
+                3. Regular Donation: none of the above are true
 
 
 
@@ -100,69 +100,61 @@
     ELSE CAST([amount] as float)
   END AS [gift_amount],
 
-	/*CASE
+	CASE
     WHEN LEN([appeal_code])<=0
       OR [appeal_code] IS NULL
     THEN NULL
     ELSE CAST([appeal_code] as varchar(max))
-  END*/
-  NULL AS [appeal_code],
+  END AS [appeal_code],
 
-	/*CASE
+	CASE
     WHEN LEN([appeal_code])<=0
       OR [appeal_code] IS NULL
     THEN NULL
     ELSE CAST([appeal_code] as varchar(max))
-  END*/
-  NULL AS [appeal_name],
+  END AS [appeal_name],
 
-	/*CASE
+	CASE
     WHEN LEN([segment_code])<=0
       OR [segment_code] IS NULL
     THEN NULL
     ELSE CAST([segment_code] as varchar(max))
-  END*/
-  NULL AS [segment_code],
+  END AS [segment_code],
 
-	/*CASE
+	CASE
     WHEN LEN([segment_description])<=0
       OR [segment_description] IS NULL
     THEN NULL
     ELSE CAST([segment_description] as varchar(max))
-  END*/
-  NULL AS [segment_name],
+  END AS [segment_name],
 
-	/*CASE
+	CASE
     WHEN LEN([project_code])<=0
       OR [project_code] IS NULL
     THEN NULL
     ELSE CAST([project_code] as varchar(max))
-  END*/
-  NULL AS [fund_code],
+  END AS [fund_code],
 
-	/*CASE
+	CASE
     WHEN LEN([project_name])<=0
       OR [project_name] IS NULL
     THEN NULL
     ELSE CAST([project_name] as varchar(max))
-  END*/
-  NULL AS [fund_name],
+  END AS [fund_name],
 
-	/*CASE
+	CASE
     WHEN LEN([gift_premiums_premium_id])<=0
       OR [gift_premiums_premium_id] IS NULL
     THEN NULL
     ELSE CAST([gift_premiums_premium_id] as varchar(max))
-  END*/
-  NULL AS [premium_code],
+  END AS [premium_code],
 
-	/*CASE
+	CASE
     WHEN LEN([gift_premiums_premium])<=0
       OR [gift_premiums_premium] IS NULL
     THEN NULL
     ELSE CAST([gift_premiums_premium] as varchar(max))
-  END*/
-  NULL AS [premium_name],
+  END AS [premium_name],
 
 	/*CASE
     WHEN LEN([insert_media_code])<=0
