@@ -546,9 +546,9 @@ USING(
    		   ,[admin_name_2] as [global_dma]
          FROM [Dunham].[geo].[geonames_postal_code_all]
 
-       ) geo on geo.[postal_code] = CAST(c.[primary_zip] as varchar(max))
-   		AND geo.[global_state] = c.[primary_state]
-   		AND geo.[global_city] = [primary_city]
+       ) geo on geo.[postal_code] = CAST(c.[insert_zip] as varchar(max))
+   		AND UPPER(geo.[global_state]) = UPPER(c.[insert_state])
+   		AND UPPER(geo.[global_city]) = UPPER([insert_city])
 
 
    WHERE [insert_constituent_id] IS NOT NULL) AS source
