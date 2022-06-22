@@ -1,77 +1,79 @@
 /*===========================================================================================================================================
  Procedure:   sos contact transformation
- Create date: 2022-05-16
+ Create date: 2022-06-22
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[sos].[account], [Dunham].[sos].[contact], [Dunham].[sos].[user], [Dunham].[sos].[gift_stage]
+ Parameter(s): [Dunham].[sos].[account], [Dunham].[sos].[contact], [Dunham].[sos].[user],
+                [Dunham].[sos].[gift_stage], [Dunham].[geo].[us_postal_codes_to_markets], [Dunham].[geo].[geonames_postal_code_all]
  Return Value(s): [Dunham].[sos].[contact_stage]
  Programming Notes:
 
-      **Only rows with a ID will be brought in for analysis
+       **Only rows with a ID will be brought in for analysis
 
-                Contact Type:
-                1. Recurring Donor: if donor has gift associated with 'Recurring' appeal_code
-                2. [panel_board_c] if is not blank
-                2. Grant Maker: if [npsp_grantmaker_c] is true
-                3. Event Sponsor: if [event_sponsor_c] is not blank
-                4. Event VIP: if [event_vip_c] is not blank
-                5. Event Attendee: if [events_attended_c] is not blank
-                6. Local Volunteer: if [sos_local_volunteer_c] is true
-                7. Regular Donor: if none of the above are true
+                 Contact Type:
+                 1. Recurring Donor: if donor has gift associated with 'Recurring' appeal_code
+                 2. [panel_board_c] if is not blank
+                 2. Grant Maker: if [npsp_grantmaker_c] is true
+                 3. Event Sponsor: if [event_sponsor_c] is not blank
+                 4. Event VIP: if [event_vip_c] is not blank
+                 5. Event Attendee: if [events_attended_c] is not blank
+                 6. Local Volunteer: if [sos_local_volunteer_c] is true
+                 7. Regular Donor: if none of the above are true
 
-                Demographic Columns:
-                1. Gender
-                2. Age
-                3. Marital Status
-                4. Church Affiliation
-                5. NULL
+                 Demographic Columns:
+                 1. Gender
+                 2. Age
+                 3. Marital Status
+                 4. Church Affiliation
+                 5. NULL
 
-Exclusions:
-               Appeal exclusions:
-               1. address is blank
-               2. foreign address
-               3. deceased
-             CUSTOM EXCLUSIONS:
-               4. if [npsp_do_not_contact_c] is true
-               5. if [returned_mail_c] is true
-               6. if [mailing_list_c] is Receipts Only
-               7. if [mailing_status_c] is Receipts Only, Do Not Mail, Internal Address, Wrong Address
-               8. if [do_not_mail_c] is true
+      Exclusions:
+                Appeal exclusions:
+                1. address is blank
+                2. foreign address
+                3. deceased
+              CUSTOM EXCLUSIONS:
+                4. if [npsp_do_not_contact_c] is true
+                5. if [returned_mail_c] is true
+                6. if [mailing_list_c] is Receipts Only
+                7. if [mailing_status_c] is Receipts Only, Do Not Mail, Internal Address, Wrong Address
+                8. if [do_not_mail_c] is true
 
-               Newsletter exclusions:
-               1. address is blank
-               2. foreign address
-               3. deceased
-             CUSTOM EXCLUSIONS:
-               4. if [npsp_do_not_contact_c] is true
-               5. if [returned_mail_c] is true
-               6. if [mailing_list_c] is Receipts Only
-               7. if [mailing_status_c] is Receipts Only, Do Not Mail, Internal Address, Wrong Address
-               8. if [do_not_mail_c] is true
+                Newsletter exclusions:
+                1. address is blank
+                2. foreign address
+                3. deceased
+              CUSTOM EXCLUSIONS:
+                4. if [npsp_do_not_contact_c] is true
+                5. if [returned_mail_c] is true
+                6. if [mailing_list_c] is Receipts Only
+                7. if [mailing_status_c] is Receipts Only, Do Not Mail, Internal Address, Wrong Address
+                8. if [do_not_mail_c] is true
 
-               Email exclusions:
-               1. primary and secondary email are blank
-               2. deceased
-             CUSTOM EXCLUSIONS:
-               3. if [npsp_do_not_contact_c] is true
-               4. if [is_email_bounced] is true
-               5. if [has_opted_out_of_email] is true
-               6. if [email_opt_out_c] is true
-               7. if [do_not_e_mail_c]
-               8. if [mailing_status_c] is Receipts Only, Do Not E-Mail
+                Email exclusions:
+                1. primary and secondary email are blank
+                2. deceased
+              CUSTOM EXCLUSIONS:
+                3. if [npsp_do_not_contact_c] is true
+                4. if [is_email_bounced] is true
+                5. if [has_opted_out_of_email] is true
+                6. if [email_opt_out_c] is true
+                7. if [do_not_e_mail_c]
+                8. if [mailing_status_c] is Receipts Only, Do Not E-Mail
 
-               Text exclusions:
-               1. primary and secondary phone are blank
-               2. deceased
-             CUSTOM EXCLUSIONS:
-               3. if [npsp_do_not_contact_c] is true
-               4. if [mailing_status_c] is Receipts Only
+                Text exclusions:
+                1. primary and secondary phone are blank
+                2. deceased
+              CUSTOM EXCLUSIONS:
+                3. if [npsp_do_not_contact_c] is true
+                4. if [mailing_status_c] is Receipts Only
+
 
  =============================================================================================================================================
  SUMMARY OF CHANGES
  Date (yyyy-mm-dd)		Author				Comments
  ---------------------------------------------------------------------------------------------------------------------------------------------
- 2022-06-10           JB             Added 'Recurring Donor' contact type and logic
+
  ==============================================================================================================================================*/
 
 IF OBJECT_ID('Dunham.sos.contact_stage') IS NULL
@@ -91,9 +93,13 @@ CREATE TABLE [sos].[contact_stage](
     [address_line_2] [varchar](max) NULL,
     [address_line_3] [varchar](max) NULL,
     [city] [varchar](max) NULL,
+    [county] [varchar](max) NULL,
     [state] [varchar](max) NULL,
     [postal] [varchar](max) NULL,
     [country] [varchar](max) NULL,
+    [dma] [varchar](max) NULL,
+    [latitude] [float] NULL,
+    [longitude] [float] NULL,
     [primary_email] [varchar](max) NULL,
     [secondary_email] [varchar](max) NULL,
     [primary_phone] [varchar](max) NULL,
@@ -130,547 +136,586 @@ CREATE TABLE [sos].[contact_stage](
 
 MERGE [Dunham].[sos].[contact_stage] WITH (HOLDLOCK) AS target
 USING(
-SELECT DISTINCT
-
-      CAST(a.[id] as varchar(200)) as [pk_constituent_id],
-
-      CASE
-        WHEN a.[name] is null AND c.[name] is null
-        THEN NULL
-        WHEN CHARINDEX('Household', a.[name])=0
-        THEN CAST(a.[name] as varchar(max))
-        ELSE CAST(c.[name] as varchar(max))
-      END as [company_name],
-
-      /*contact_type is customized by client*/
-      CASE
-        WHEN [is_recurring] = 1
-        THEN 'Recurring Donor'
-        WHEN [panel_board_c] is not null
-        THEN [panel_board_c]
-        WHEN [npsp_grantmaker_c]=1
-        THEN 'Grant Maker'
-        WHEN [event_sponsor_c] is not null
-        THEN 'Event Sponsor'
-        WHEN [event_vip_c] is not null
-        THEN 'Event VIP'
-        WHEN [events_attended_c] is not null
-        THEN 'Event Attendee'
-        WHEN [sos_local_volunteer_c]=1
-        THEN 'Local Volunteer'
-        ELSE 'Regular Donor'
-      END as [contact_type],
-
-      /*this field is used to personalize communications*/
-      CASE
-        WHEN [npo_02_informal_greeting_c] IS NULL
-        THEN 'Friend'
-        ELSE CAST([npo_02_informal_greeting_c] as varchar(max))
-      END as [salutation],
-
-      /*this field is used to personalize envelopes*/
-      CASE
-        WHEN LEN([npo_02_formal_greeting_c])<=0
-          OR [npo_02_formal_greeting_c] IS NULL
-        THEN a.[name]
-        ELSE CAST([npo_02_formal_greeting_c] as varchar(max))
-      END as [addressee],
-
-      /*CASE
-        WHEN LEN([salutation])<=0
-          OR [salutation] IS NULL
-        THEN NULL
-        ELSE CAST([salutation] as varchar(max))
-      END*/
-      NULL as [title],
-
-      CASE
-        WHEN LEN([last_name])<=0
-          OR [last_name] IS NULL
-        THEN NULL
-        ELSE CAST([last_name] as varchar(max))
-      END as [last_name],
-
-      CASE
-        WHEN LEN([first_name])<=0
-          OR [first_name] IS NULL
-        THEN NULL
-        ELSE CAST([first_name] as varchar(max))
-      END as [first_name],
-
-      /*CASE
-        WHEN LEN([suffix_c])<=0
-          OR [suffix_c] IS NULL
-        THEN NULL
-        ELSE CAST([suffix_c] as varchar(max))
-      END*/
-      NULL as [suffix],
-
-      CASE
-        WHEN LEN([created_date])<=0
-          OR [created_date] IS NULL
-        THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
-        ELSE CAST([created_date] as datetime2)
-      END as [account_created_date],
-
-      CASE
-        WHEN LEN([billing_street])<=0
-          OR [billing_street] IS NULL
-        THEN NULL
-        ELSE CAST([billing_street] as varchar(max))
-      END as [address_line_1],
-
-      /*CASE
-        WHEN LEN([insert_address_line_2])<=0
-          OR [insert_address_line_2] IS NULL
-        THEN NULL
-        ELSE CAST([insert_address_line_2] as varchar(max))
-      END*/
-      NULL as [address_line_2],
-
-      /*CASE
-        WHEN LEN([insert_address_line_3])<=0
-          OR [insert_address_line_3] IS NULL
-        THEN NULL
-        ELSE CAST([insert_address_line_3] as varchar(max))
-      END*/
-      NULL as [address_line_3],
-
-      CASE
-        WHEN LEN([billing_city])<=0
-          OR [billing_city] IS NULL
-        THEN NULL
-        ELSE CAST([billing_city] as varchar(max))
-      END as [city],
-
-      CASE
-        WHEN LEN([billing_state])<=0
-          OR [billing_state] IS NULL
-        THEN NULL
-        ELSE CAST([billing_state] as varchar(max))
-      END as [state],
-
-      CASE
-        WHEN LEN([billing_postal_code])<=0
-          OR [billing_postal_code] IS NULL
-        THEN NULL
-        ELSE CAST(LEFT([billing_postal_code],5) as varchar(max))
-      END as [postal],
-
-      CASE
-        WHEN LEN([billing_country])<=0
-          OR [billing_country] IS NULL
-        THEN NULL
-        ELSE CAST([billing_country] as varchar(max))
-      END as [country],
-
-      /*inserts secondary_email if primary_email is blank
-        casting all emails in lower-case characters for modeling*/
-
-      CASE
-        WHEN (LEN([email])<=0
-            OR [email] IS NULL)
-          AND LEN([npe_01_alternate_email_c])>0
-        THEN CAST(LOWER([npe_01_alternate_email_c]) as varchar(max))
-        WHEN LEN([email])<=0
-          OR [email] IS NULL
-        THEN NULL
-        ELSE CAST(LOWER([email]) as varchar(max))
-      END as [primary_email],
-
-      /*casting all emails in lower-case characters for modeling*/
-      CASE
-        WHEN LEN([npe_01_alternate_email_c])<=0
-          OR [npe_01_alternate_email_c] IS NULL
-        THEN NULL
-
-        /*removes secondary email duplication if secondary email inserted into primary email*/
-        WHEN (LEN([email])<=0
-            OR [email] IS NULL)
-          AND LEN([npe_01_alternate_email_c])>0
-        THEN NULL
-        ELSE CAST(LOWER([npe_01_alternate_email_c]) as varchar(max))
-      END as [secondary_email],
-
-      /*inserts secondary_phone as primary_phone if primary_phone is blank*/
-      CASE
-        WHEN (LEN(c.[phone])<=0
-            OR c.[phone] IS NULL)
-          AND LEN([mobile_phone])>0
-        THEN CAST([mobile_phone] as varchar(max))
-        WHEN LEN(c.[phone])<=0
-          OR c.[phone] IS NULL
-        THEN NULL
-        ELSE CAST(c.[phone] as varchar(max))
-      END as [primary_phone],
-
-      CASE
-        WHEN LEN([mobile_phone])<=0
-          OR [mobile_phone] IS NULL
-        THEN NULL
-        /*removes secondary phone duplication when secondary phone inserted into primary phone*/
-        WHEN (LEN(c.[phone])<=0
-            OR c.[phone] IS NULL)
-          AND LEN([mobile_phone])>0
-        THEN NULL
-        ELSE CAST([mobile_phone] as varchar(max))
-      END as [secondary_phone],
-
-      /*CASE
-        WHEN [z_9_tags_c] IS NULL
-        THEN NULL
-        ELSE CAST([z_9_tags_c] as varchar(max))
-      END*/
-      NULL as [tags],
-
-      /*start donor advancement specific data fields for filters*/
-      CASE
-        WHEN LEN([sos_rep_c])<=0
-          OR [sos_rep_c] IS NULL
-        THEN NULL
-        ELSE CAST([sos_rep_c] as varchar(max))
-      END as [portfolio],
-
-      /*identification, cultivation, solicitation, or stewardship designation*/
-      /*CASE
-        WHEN LEN([insert_gift_stage])<=0
-          OR [insert_gift_stage] IS NULL
-        THEN NULL
-        ELSE CAST([insert_gift_stage] as varchar(max))
-      END*/
-      NULL as [gift_stage],
-
-      /*gift capacity range - should display $ amount range*/
-      /*CASE
-        WHEN LEN([n_gift_capacity_c])<=0
-          OR [n_gift_capacity_c] IS NULL
-        THEN NULL
-        ELSE CAST([n_gift_capacity_c] as varchar(max))
-      END*/
-      NULL as [gift_range],
-
-      /*gift capacity score - should display # correlated to [gift_range]*/
-      /*CASE
-        WHEN LEN([insert_gift_rating])<=0
-          OR [insert_gift_rating] IS NULL
-        THEN NULL
-        ELSE CAST([insert_gift_rating] as varchar(max))
-      END*/
-      NULL as [gift_rating],
-
-      /*wealth score - score generated by WE*/
-      /*CASE
-        WHEN LEN([insert_wealth_score])<=0
-          OR [insert_wealth_score] IS NULL
-        THEN NULL
-        ELSE CAST([insert_wealth_score] as varchar(max))
-      END*/
-      NULL as [wealth_score],
-
-      /*WE p2g score = gift_score; formats p2g if '|' not found*/
-      /*CASE
-        WHEN [z_6_propensity_to_give_score_c] IS NULL
-        THEN NULL
-        ELSE CAST([z_6_propensity_to_give_score_c] as varchar(max))
-      END*/
-      NULL as [gift_score],
-      /*end donor advancement specific columns*/
-
-      /*custom by client, may contain true/false or date; output as bit/boolean
-        default script assumes date entry*/
-      CASE
-        WHEN [npsp_deceased_c]=1
-        THEN 1
-        ELSE 0
-      END as [deceased],
-
-      /*start custom communication eligibility fields - default US exclusions in script*/
-
-      /*default client appeal mailing exclusions*/
-      CASE
-
-      /*excludes blank addresses*/
-        WHEN LEN([billing_street])<=0
-          OR [billing_street] IS NULL
-        THEN 0
-
-        /*excludes foreign addresses - US*/
-        WHEN [international_address_c]=1
-        THEN 0
-
-        /*excludes deceased - default as date entry*/
-        WHEN [npsp_deceased_c]=1
-        THEN 0
-
-        /*CUSTOM EXCLUSIONS*/
-        WHEN [npsp_do_not_contact_c]=1
-        THEN 0
-
-        WHEN [returned_mail_c]=1
-        THEN 0
-
-        WHEN [mailing_list_c] = 'Receipts Only'
-        THEN 0
-
-        WHEN [do_not_mail_c]=1
-        THEN 0
-
-        WHEN [wrong_address_c]=1
-        THEN 0
-
-        WHEN CHARINDEX('Do Not Mail',c.[mailing_status_c])>0
-        THEN 0
-
-        WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
-        THEN 0
-
-        WHEN CHARINDEX('International',c.[mailing_status_c])>0
-        THEN 0
-
-        WHEN CHARINDEX('Wrong Address',c.[mailing_status_c])>0
-        THEN 0
-
-        WHEN [do_not_mail_c]=1
-        THEN 0
-
-        ELSE 1
-      END as [appeal_eligible],
-
-      /*default client newsletter mailing exclusions*/
-      CASE
-
-      /*excludes blank addresses*/
-        WHEN LEN([billing_street])<=0
-          OR [billing_street] IS NULL
-        THEN 0
-
-        /*excludes foreign addresses - US*/
-        WHEN [international_address_c]=1
-        THEN 0
-
-        /*excludes deceased - default as date entry*/
-        WHEN [npsp_deceased_c]=1
-        THEN 0
-
-        /*CUSTOM EXCLUSIONS*/
-          WHEN [npsp_do_not_contact_c]=1
-          THEN 0
-
-          WHEN [returned_mail_c]=1
-          THEN 0
-
-          WHEN [mailing_list_c] = 'Receipts Only'
-          THEN 0
-
-          WHEN [do_not_mail_c]=1
-          THEN 0
-
-          WHEN [wrong_address_c]=1
-          THEN 0
-
-          WHEN CHARINDEX('Do Not Mail',c.[mailing_status_c])>0
-          THEN 0
-
-          WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
-          THEN 0
-
-          WHEN CHARINDEX('International',c.[mailing_status_c])>0
-          THEN 0
-
-          WHEN CHARINDEX('Wrong Address',c.[mailing_status_c])>0
-          THEN 0
-
-          WHEN [do_not_mail_c]=1
-          THEN 0
-
-          ELSE 1
-      END as [newsletter_eligible],
-
-      /*default client email communication exclusions*/
-      CASE
-
-        /*excludes blank primary and secondary emails*/
-        WHEN (LEN([email])<=0
-            OR [email] IS NULL)
-          AND (LEN([npe_01_alternate_email_c])<=0
-            OR [npe_01_alternate_email_c] IS NULL)
-        THEN 0
-
-        /*excludes deceased - default as date entry*/
-        WHEN [npsp_deceased_c]=1
-        THEN 0
-
-      /*CUSTOM EXCLUSIONS*/
-        WHEN [npsp_do_not_contact_c]=1
-        THEN 0
-
-        WHEN [has_opted_out_of_email]=1
-        THEN 0
-
-        WHEN [is_email_bounced]=1
-        THEN 0
-
-        WHEN [email_opt_out_c]=1
-        THEN 0
-
-        WHEN [do_not_e_mail_c] = 1
-        THEN 0
-
-        WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
-        THEN 0
-
-        WHEN CHARINDEX('E-mail',c.[mailing_status_c])>0
-        THEN 0
-
-        ELSE 1
-      END as [email_eligible],
-
-      /*default client text communication exclusions*/
-      CASE
-
-        /*excludes blank primary and secondary phones*/
-        WHEN (LEN(c.[phone])<=0
-            OR c.[phone] IS NULL)
-          AND (LEN([mobile_phone])<=0
-            OR [mobile_phone] IS NULL)
-        THEN 0
-
-        /*excludes deceased - default as date entry*/
-        WHEN [npsp_deceased_c]=1
-        THEN 0
-
-      /*CUSTOM EXCLUSIONS*/
-        WHEN [npsp_do_not_contact_c]=1
-        THEN 0
-
-        WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
-        THEN 0
-
-        ELSE 1
-      END as [text_eligible],
-
-      /*only used when multiple CRM's are used to create data files*/
-      /*CASE
-        WHEN [insert_crm] IS NULL
-          OR LEN([insert_crm)<=0
-        THEN NULL
-        ELSE CAST([insert_crm] as varchar(50))
-      END*/
-      NULL as [crm],
-
-      /*custom demographic data columns to populate audience report*/
-      CASE
-        WHEN [stayclassy_gender_c] IS NULL
-          OR [stayclassy_gender_c]='Unknown'
-        THEN NULL
-        ELSE CAST(UPPER(LEFT([stayclassy_gender_c],1)) as varchar(max))
-      END as [demographic_1],
-
-      CASE
-        WHEN [birthdate] IS NULL
-        THEN NULL
-        WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 65
-        THEN '65+'
-        WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 55
-        THEN '55-64'
-        WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 45
-        THEN '45-54'
-        WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 35
-        THEN '35-44'
-        WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 25
-        THEN '25-34'
-        WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 18
-        THEN '18-24'
-        ELSE NULL
-      END as [demographic_2],
-
-      CASE
-        WHEN [marital_status_c] IS NULL
-          OR LEN([marital_status_c])<=0
-        THEN NULL
-        ELSE CAST([marital_status_c] as varchar(max))
-      END as [demographic_3],
-
-      CASE
-        WHEN [sos_local_church_affiliation_c] IS NULL
-          AND [church_membership_c] is null
-        THEN NULL
-        WHEN [sos_local_church_affiliation_c] is not null
-        THEN CAST([sos_local_church_affiliation_c] as varchar(max))
-        WHEN [sos_local_church_affiliation_c] is null
-          AND [church_membership_c] is not null
-          AND CHARINDEX('(', [church_membership_c])>0
-        THEN LEFT([church_membership_c], CHARINDEX('(', [church_membership_c])-1)
-        WHEN [sos_local_church_affiliation_c] is null
-          AND [church_membership_c] is not null
-          AND CHARINDEX('(', [church_membership_c])=0
-        THEN CAST([church_membership_c] as varchar(max))
-        ELSE NULL
-      END as [demographic_4],
-
-      /*CASE
-        WHEN [insert_demographic_5] IS NULL
-          OR LEN([insert_demographic_5])<=0
-        THEN NULL
-        ELSE CAST([insert_demographic_5] as varchar(50))
-      END*/
-      NULL as [demographic_5],
-
-      /*'wildcard' contact fields that are custom per client*/
-      NULL as [attribute_1],
-      NULL as [attribute_2],
-      NULL as [attribute_3],
-      NULL as [attribute_4],
-      NULL as [attribute_5],
-
-      /*creates unique constituent_id for aggregated view PK and contact_stage FK*/
-      CAST(CONCAT(UPPER('sos'),'_',[id]) as varchar(210))  AS [fk_client_constituent_id],
-
-      UPPER('sos') as [client_acronym]
-
-FROM [Dunham].[sos].[account] a
-
-    /*joins contact specific information to account info*/
-    LEFT JOIN (
-        SELECT id as [contact_id],
-               [account_id],
-               [last_name],
-               [first_name],
-               [salutation],
-               [name],
-               [phone],
-               [mobile_phone],
-               [email],
-               [npe_01_alternate_email_c],
-               [stayclassy_gender_c],
-               [birthdate],
-               [marital_status_c],
-               [sos_local_church_affiliation_c],
-               [church_membership_c],
-               [panel_board_c],
-               [sos_local_volunteer_c],
-               [event_vip_c],
-               [events_attended_c],
-               [event_sponsor_c],
-               [npsp_deceased_c],
-               [constituent_status_c],
-               [npsp_do_not_contact_c],
-               [has_opted_out_of_email],
-               [is_email_bounced],
-               [mailing_status_c],
-               ROW_NUMBER() OVER (PARTITION BY [account_id] ORDER BY [created_date]) AS RowID
-        FROM [Dunham].[sos].[contact]
-        WHERE [is_deleted]=0
-    ) c on c.[account_id]=a.[id]
-
-    LEFT JOIN (
-      SELECT DISTINCT fk_constituent_id,
-      1 as [is_recurring]
-      FROM Dunham.sos.gift_stage
-      WHERE appeal_code = 'Recurring'
-    ) g on g.fk_constituent_id = a.[id] collate SQL_Latin1_General_CP1_CI_AS
-
-WHERE a.[id] IS NOT NULL AND RowID = 1) AS source
+        SELECT DISTINCT
+
+          CAST([id] as varchar(200)) as [pk_constituent_id],
+
+          CASE
+            WHEN a.[name] is null AND c.[name] is null
+            THEN NULL
+            WHEN CHARINDEX('Household', a.[name])=0
+            THEN CAST(a.[name] as varchar(max))
+            ELSE CAST(c.[name] as varchar(max))
+          END as [company_name],
+
+          /*contact_type is customized by client*/
+          CASE
+            WHEN [is_recurring] = 1
+            THEN 'Recurring Donor'
+            WHEN [panel_board_c] is not null
+            THEN [panel_board_c]
+            WHEN [npsp_grantmaker_c]=1
+            THEN 'Grant Maker'
+            WHEN [event_sponsor_c] is not null
+            THEN 'Event Sponsor'
+            WHEN [event_vip_c] is not null
+            THEN 'Event VIP'
+            WHEN [events_attended_c] is not null
+            THEN 'Event Attendee'
+            WHEN [sos_local_volunteer_c]=1
+            THEN 'Local Volunteer'
+            ELSE 'Regular Donor'
+          END as [contact_type],
+
+          /*this field is used to personalize communications*/
+          CASE
+            WHEN [salutation] IS NULL
+            THEN 'Friend'
+            ELSE CAST([salutation] as varchar(max))
+          END as [salutation],
+
+          /*this field is used to personalize envelopes*/
+          CASE
+            WHEN [npo_02_formal_greeting_c] IS NULL
+            THEN NULL
+            ELSE CAST([npo_02_formal_greeting_c] as varchar(max))
+          END as [addressee],
+
+          /*CASE
+            WHEN [insert_title] IS NULL
+            THEN NULL
+            ELSE CAST([insert_title] as varchar(max))
+          END*/
+          NULL as [title],
+
+          CASE
+            WHEN [last_name] IS NULL
+            THEN NULL
+            ELSE CAST([last_name] as varchar(max))
+          END as [last_name],
+
+          CASE
+            WHEN [first_name] IS NULL
+            THEN NULL
+            ELSE CAST([first_name] as varchar(max))
+          END as [first_name],
+
+          /*CASE
+            WHEN [insert_suffix] IS NULL
+            THEN NULL
+            ELSE CAST([insert_suffix] as varchar(max))
+          END*/
+          NULL as [suffix],
+
+          CASE
+            WHEN [created_date] IS NULL
+            THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+            ELSE CAST([created_date] as datetime2)
+          END as [account_created_date],
+
+          CASE
+            WHEN [billing_street] IS NULL
+            THEN NULL
+            ELSE CAST([billing_street] as varchar(max))
+          END as [address_line_1],
+
+          /*CASE
+            WHEN [insert_address_line_2] IS NULL
+            THEN NULL
+            ELSE CAST([insert_address_line_2] as varchar(max))
+          END*/
+          NULL as [address_line_2],
+
+          /*CASE
+            WHEN [insert_address_line_3] IS NULL
+            THEN NULL
+            ELSE CAST([insert_address_line_3] as varchar(max))
+          END*/
+          NULL as [address_line_3],
+
+          CASE
+            WHEN [global_city] IS NULL
+              AND [billing_city] IS NOT NULL
+            THEN CAST([billing_city] as varchar(max))
+            WHEN [global_city] IS NULL
+              AND [billing_city] IS NULL
+            THEN NULL
+            ELSE CAST([global_city] as varchar(max))
+          END as [city],
+
+          CASE
+            WHEN [global_county] IS NULL
+            THEN NULL
+            ELSE CAST([global_county] as varchar(max))
+          END as [county],
+
+          CASE
+            WHEN [global_state] IS NULL
+              AND [billing_state] IS NOT NULL
+            THEN CAST([billing_state] as varchar(max))
+            WHEN [global_state] IS NULL
+              AND [billing_state] IS NULL
+            THEN NULL
+            ELSE CAST([global_state] as varchar(max))
+          END as [state],
+
+          CASE
+            WHEN [billing_postal_code] IS NULL
+            THEN NULL
+            ELSE CAST(LEFT([billing_postal_code],5) as varchar(max))
+          END as [postal],
+
+          CASE
+            WHEN [country_code] IS NULL
+              AND [billing_country] IS NOT NULL
+            THEN CAST([billing_country] as varchar(max))
+            WHEN [country_code] IS NULL
+              AND [billing_country] IS NULL
+            THEN NULL
+            ELSE CAST([country_code] as varchar(max))
+          END as [country],
+
+          CASE
+            WHEN [global_dma] IS NULL
+            THEN NULL
+            ELSE CAST([global_dma] as varchar(max))
+          END as [dma],
+
+          CASE
+            WHEN [latitude] IS NULL
+            THEN NULL
+            ELSE CAST([latitude] as float)
+          END as [latitude],
+
+          CASE
+          WHEN [longitude] IS NULL
+          THEN NULL
+          ELSE CAST([longitude] as float)
+          END as [longitude],
+
+          /*inserts secondary_email if primary_email is blank
+            casting all emails in lower-case characters for modeling*/
+
+          CASE
+            WHEN [email] IS NULL
+              AND [npe_01_alternate_email_c] IS NOT NULL
+            THEN CAST(LOWER([npe_01_alternate_email_c]) as varchar(max))
+            WHEN [email] IS NULL
+            THEN NULL
+            ELSE CAST(LOWER([email]) as varchar(max))
+          END as [primary_email],
+
+          /*casting all emails in lower-case characters for modeling*/
+          CASE
+            WHEN [npe_01_alternate_email_c] IS NULL
+            THEN NULL
+
+            /*removes secondary email duplication if secondary email inserted into primary email*/
+            WHEN [email] IS NULL
+              AND [npe_01_alternate_email_c] IS NOT NULL
+            THEN NULL
+
+            /*removes secondary email duplication if secondary email is equivalent to primary email*/
+            WHEN LOWER([email]) = LOWER([npe_01_alternate_email_c])
+            THEN NULL
+
+            ELSE CAST(LOWER([npe_01_alternate_email_c]) as varchar(max))
+          END as [secondary_email],
+
+          /*inserts secondary_phone as primary_phone if primary_phone is blank*/
+          CASE
+            WHEN a.[phone] IS NULL
+              AND [mobile_phone] IS NOT NULL
+            THEN CAST([mobile_phone] as varchar(max))
+            WHEN a.[phone] IS NULL
+            THEN NULL
+            ELSE CAST(a.[phone] as varchar(max))
+          END as [primary_phone],
+
+          CASE
+            WHEN [mobile_phone] IS NULL
+            THEN NULL
+
+            /*removes secondary phone duplication when secondary phone inserted into primary phone*/
+            WHEN a.[phone] IS NULL
+              AND [mobile_phone] IS NOT NULL
+            THEN NULL
+
+            /*removes secondary phone duplication when secondary phone is equivalent to primary phone*/
+            WHEN a.[phone] = [mobile_phone]
+            THEN NULL
+
+            ELSE CAST([mobile_phone] as varchar(max))
+          END as [secondary_phone],
+
+          /*CASE
+            WHEN [insert_tags] IS NULL
+            THEN NULL
+            ELSE CAST([insert_tags] as varchar(max))
+          END*/
+          NULL as [tags],
+
+        /*start donor advancement specific data fields for filters*/
+          CASE
+            WHEN [sos_rep_c] IS NULL
+            THEN NULL
+            ELSE CAST([sos_rep_c] as varchar(max))
+          END as [portfolio],
+
+          /*identification, cultivation, solicitation, or stewardship designation*/
+          /*CASE
+            WHEN [insert_gift_stage] IS NULL
+            THEN NULL
+            ELSE CAST([insert_gift_stage] as varchar(max))
+          END*/
+          NULL as [gift_stage],
+
+          /*gift capacity range - should display $ amount range*/
+          /*CASE
+            WHEN [insert_gift_range] IS NULL
+            THEN NULL
+            ELSE CAST([insert_gift_range] as varchar(max))
+          END*/
+          NULL as [gift_range],
+
+          /*gift capacity score - should display # correlated to [gift_range]*/
+          /*CASE
+            WHEN [insert_gift_rating] IS NULL
+            THEN NULL
+            ELSE CAST([insert_gift_rating] as varchar(max))
+          END*/
+          NULL as [gift_rating],
+
+          /*wealth score - score generated by WE*/
+          /*CASE
+            WHEN [insert_wealth_score] IS NULL
+            THEN NULL
+            ELSE CAST([insert_wealth_score] as varchar(max))
+          END*/
+          NULL as [wealth_score],
+
+          /*WE p2g score = gift_score; formats p2g if '|' not found*/
+          /*CASE
+            WHEN [insert_gift_score] IS NULL
+            THEN NULL
+
+            /*auto formatting p2g score for consistencies in field*/
+            WHEN CHARINDEX('|', [insert_gift_score]) = 0
+            THEN CAST(CONCAT(LEFT([insert_gift_score],1),'|',RIGHT([insert_gift_score],1)) as varchar(max))
+
+            ELSE CAST([insert_gift_score] as varchar(max))
+          END*/
+          NULL as [gift_score],
+
+        /*end donor advancement specific columns*/
+
+          /*custom by client, may contain true/false or date; output as bit/boolean
+            default script assumes date entry*/
+          CASE
+            WHEN [npsp_deceased_c]=1
+            THEN 1
+            ELSE 0
+          END as [deceased],
+
+        /*start custom communication eligibility fields - default AUS exclusions in script*/
+
+        /*default client appeal mailing exclusions*/
+          CASE
+
+          /*excludes blank addresses*/
+            WHEN [billing_street] IS NULL
+            THEN 0
+
+            /*excludes foreign addresses - US*/
+            WHEN [country_code] IS NOT NULL
+              AND (UPPER([country_code]) <> 'US')
+            THEN 0
+            WHEN [country_code] IS NULL
+              AND [billing_country] IS NOT NULL
+              AND (UPPER([billing_country]) <> 'US'
+                    AND UPPER([billing_country]) <> 'USA'
+                    AND UPPER([billing_country]) <> 'UNITED STATES'
+                    AND UPPER([billing_country]) <> 'UNITED STATES OF AMERICA')
+            THEN 0
+
+            /*excludes deceased - default as date entry*/
+            WHEN [npsp_deceased_c]=1
+            THEN 0
+
+          /*CUSTOM EXCLUSIONS*/
+            WHEN [npsp_do_not_contact_c]=1
+            THEN 0
+            WHEN [returned_mail_c]=1
+            THEN 0
+            WHEN [mailing_list_c] = 'Receipts Only'
+            THEN 0
+            WHEN [do_not_mail_c]=1
+            THEN 0
+            WHEN [wrong_address_c]=1
+            THEN 0
+            WHEN CHARINDEX('Do Not Mail',c.[mailing_status_c])>0
+            THEN 0
+            WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
+            THEN 0
+            WHEN CHARINDEX('International',c.[mailing_status_c])>0
+            THEN 0
+            WHEN CHARINDEX('Wrong Address',c.[mailing_status_c])>0
+            THEN 0
+            WHEN [do_not_mail_c]=1
+            THEN 0
+
+            ELSE 1
+          END as [appeal_eligible],
+
+        /*default client newsletter mailing exclusions*/
+          CASE
+
+          /*excludes blank addresses*/
+            WHEN [billing_street] IS NULL
+            THEN 0
+
+            /*excludes foreign addresses - US*/
+            WHEN [country_code] IS NOT NULL
+              AND (UPPER([country_code]) <> 'US')
+            THEN 0
+            WHEN [country_code] IS NULL
+              AND [billing_country] IS NOT NULL
+              AND (UPPER([billing_country]) <> 'US'
+                    AND UPPER([billing_country]) <> 'USA'
+                    AND UPPER([billing_country]) <> 'UNITED STATES'
+                    AND UPPER([billing_country]) <> 'UNITED STATES OF AMERICA')
+            THEN 0
+
+            /*excludes deceased - default as date entry*/
+            WHEN [npsp_deceased_c]=1
+            THEN 0
+
+          /*CUSTOM EXCLUSIONS*/
+            WHEN [npsp_do_not_contact_c]=1
+            THEN 0
+            WHEN [returned_mail_c]=1
+            THEN 0
+            WHEN [mailing_list_c] = 'Receipts Only'
+            THEN 0
+            WHEN [do_not_mail_c]=1
+            THEN 0
+            WHEN [wrong_address_c]=1
+            THEN 0
+            WHEN CHARINDEX('Do Not Mail',c.[mailing_status_c])>0
+            THEN 0
+            WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
+            THEN 0
+            WHEN CHARINDEX('International',c.[mailing_status_c])>0
+            THEN 0
+            WHEN CHARINDEX('Wrong Address',c.[mailing_status_c])>0
+            THEN 0
+            WHEN [do_not_mail_c]=1
+            THEN 0
+
+            ELSE 1
+          END as [newsletter_eligible],
+
+        /*default client email communication exclusions*/
+          CASE
+
+            /*excludes blank primary and secondary emails*/
+            WHEN [email] IS NULL
+              AND [npe_01_alternate_email_c] IS NULL
+            THEN 0
+
+            /*excludes deceased - default as date entry*/
+            WHEN [npsp_deceased_c]=1
+            THEN 0
+
+          /*CUSTOM EXCLUSIONS*/
+            WHEN [npsp_do_not_contact_c]=1
+            THEN 0
+            WHEN [has_opted_out_of_email]=1
+            THEN 0
+            WHEN [is_email_bounced]=1
+            THEN 0
+            WHEN [email_opt_out_c]=1
+            THEN 0
+            WHEN [do_not_e_mail_c] = 1
+            THEN 0
+            WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
+            THEN 0
+            WHEN CHARINDEX('E-mail',c.[mailing_status_c])>0
+            THEN 0
+
+            ELSE 1
+          END as [email_eligible],
+
+        /*default client text communication exclusions*/
+          CASE
+
+            /*excludes blank primary and secondary phones*/
+            WHEN a.[phone] IS NULL
+              AND [mobile_phone] IS NULL
+            THEN 0
+
+            /*excludes deceased - default as date entry*/
+            WHEN [npsp_deceased_c]=1
+            THEN 0
+
+          /*CUSTOM EXCLUSIONS*/
+            WHEN [npsp_do_not_contact_c]=1
+            THEN 0
+            WHEN CHARINDEX('Receipts Only',c.[mailing_status_c])>0
+            THEN 0
+
+            ELSE 1
+          END as [text_eligible],
+
+          /*only used when multiple CRM's are used to create data files*/
+          /*CASE
+            WHEN [insert_crm] IS NULL
+            THEN NULL
+            ELSE CAST([insert_crm] as varchar(50))
+          END*/
+          NULL as [crm],
+
+        /*custom demographic data columns to populate audience report*/
+          CASE
+            WHEN [stayclassy_gender_c] IS NULL
+            THEN NULL
+            ELSE CAST([stayclassy_gender_c] as varchar(50))
+          END as [demographic_1],
+
+          CASE
+            WHEN [birthdate] IS NULL
+            THEN NULL
+            WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 65
+            THEN '65+'
+            WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 55
+            THEN '55-64'
+            WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 45
+            THEN '45-54'
+            WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 35
+            THEN '35-44'
+            WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 25
+            THEN '25-34'
+            WHEN YEAR(GETDATE())-LEFT([birthdate],4)>= 18
+            THEN '18-24'
+            ELSE NULL
+          END as [demographic_2],
+
+          CASE
+            WHEN [marital_status_c] IS NULL
+            THEN NULL
+            ELSE CAST([marital_status_c] as varchar(50))
+          END as [demographic_3],
+
+          CASE
+            WHEN [sos_local_church_affiliation_c] IS NULL
+              AND [church_membership_c] is null
+            THEN NULL
+            WHEN [sos_local_church_affiliation_c] is not null
+            THEN CAST([sos_local_church_affiliation_c] as varchar(max))
+            WHEN [sos_local_church_affiliation_c] is null
+              AND [church_membership_c] is not null
+              AND CHARINDEX('(', [church_membership_c])>0
+            THEN LEFT([church_membership_c], CHARINDEX('(', [church_membership_c])-1)
+            WHEN [sos_local_church_affiliation_c] is null
+              AND [church_membership_c] is not null
+              AND CHARINDEX('(', [church_membership_c])=0
+            THEN CAST([church_membership_c] as varchar(max))
+            ELSE NULL
+          END as [demographic_4],
+
+          /*CASE
+            WHEN [insert_demographic_5] IS NULL
+            THEN NULL
+            ELSE CAST([insert_demographic_5] as varchar(50))
+          END*/
+          NULL as [demographic_5],
+
+          /*'wildcard' contact fields that are custom per client*/
+          NULL as [attribute_1],
+          NULL as [attribute_2],
+          NULL as [attribute_3],
+          NULL as [attribute_4],
+          NULL as [attribute_5],
+
+          /*creates unique constituent_id for aggregated view PK and contact_stage FK*/
+          CAST(CONCAT(UPPER('sos'),'_',[id]) as varchar(210))  AS [fk_client_constituent_id],
+
+          UPPER('sos') as [client_acronym]
+
+        FROM [Dunham].[sos].[account] a
+
+        /*joins contact specific information to account info*/
+
+        LEFT JOIN (
+           SELECT id as [contact_id],
+                  [account_id],
+                  [last_name],
+                  [first_name],
+                  [salutation],
+                  [name],
+                  [phone],
+                  [mobile_phone],
+                  [email],
+                  [npe_01_alternate_email_c],
+                  [stayclassy_gender_c],
+                  [birthdate],
+                  [marital_status_c],
+                  [sos_local_church_affiliation_c],
+                  [church_membership_c],
+                  [panel_board_c],
+                  [sos_local_volunteer_c],
+                  [event_vip_c],
+                  [events_attended_c],
+                  [event_sponsor_c],
+                  [npsp_deceased_c],
+                  [constituent_status_c],
+                  [npsp_do_not_contact_c],
+                  [has_opted_out_of_email],
+                  [is_email_bounced],
+                  [mailing_status_c],
+                  ROW_NUMBER() OVER (PARTITION BY [account_id] ORDER BY [created_date]) AS RowID
+           FROM [Dunham].[sos].[contact]
+           WHERE [is_deleted]=0
+        ) c on c.[account_id]=a.[id]
+
+        /*joins recurring indicator for contact_type*/
+
+        LEFT JOIN (
+           SELECT DISTINCT fk_constituent_id,
+             1 as [is_recurring]
+           FROM Dunham.sos.gift_stage
+           WHERE appeal_code = 'Recurring'
+        ) g on g.fk_constituent_id = a.[id] collate SQL_Latin1_General_CP1_CI_AS
+
+
+        /*joins standardized address information on zip codes*/
+
+          LEFT JOIN (
+          SELECT
+                 CAST([postal_code] as varchar(max)) as postal_code
+                ,[country_code]
+                ,[place_name] as [global_city]
+                ,[admin_code_1] as [global_state]
+                ,[admin_name_2] as [global_county]
+                ,[latitude]
+                ,[longitude]
+        FROM [Dunham].[geo].[geonames_postal_code_all]
+        ) geo on (geo.[postal_code] = LEFT(a.[billing_postal_code],5)
+              and UPPER(geo.[global_state]) = UPPER(a.[billing_state])
+              and UPPER(geo.[global_city]) = UPPER(a.[billing_city])
+            )
+
+        /*joins DMA to address information*/
+
+        LEFT JOIN (
+            SELECT
+              CAST([postal_code] as varchar(max)) as [us_postal],
+              [name] as [global_dma]
+            FROM [Dunham].[geo].[us_postal_codes_to_markets]
+        ) us ON us.[us_postal] = LEFT([billing_postal_code],5)
+
+
+        WHERE [id] IS NOT NULL AND RowID = 1 AND is_deleted = 0) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
 
    /*inserts .contact rows that are not found in .contact_stage rows*/
@@ -689,9 +734,13 @@ WHERE a.[id] IS NOT NULL AND RowID = 1) AS source
          [address_line_2],
          [address_line_3],
          [city],
+         [county],
          [state],
          [postal],
          [country],
+         [dma],
+         [latitude],
+         [longitude],
          [primary_email],
          [secondary_email],
          [primary_phone],
@@ -737,9 +786,13 @@ WHERE a.[id] IS NOT NULL AND RowID = 1) AS source
          source.[address_line_2],
          source.[address_line_3],
          source.[city],
+         source.[county],
          source.[state],
          source.[postal],
          source.[country],
+         source.[dma],
+         source.[latitude],
+         source.[longitude],
          source.[primary_email],
          source.[secondary_email],
          source.[primary_phone],
@@ -793,9 +846,13 @@ WHERE a.[id] IS NOT NULL AND RowID = 1) AS source
          target.[address_line_2]=source.[address_line_2],
          target.[address_line_3]=source.[address_line_3],
          target.[city]=source.[city],
+         target.[county]=source.[county],
          target.[state]=source.[state],
          target.[postal]=source.[postal],
          target.[country]=source.[country],
+         target.[dma]=source.[dma],
+         target.[latitude]=source.[latitude],
+         target.[longitude]=source.[longitude],
          target.[primary_email]=source.[primary_email],
          target.[secondary_email]=source.[secondary_email],
          target.[primary_phone]=source.[primary_phone],
