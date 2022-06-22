@@ -22,6 +22,8 @@
                    4. NULL
                    5. NULL
 
+                   attribute_1 used for mailing opt-in flag
+
         Exclusions:
                    Appeal exclusions:
                    1. address is blank
@@ -544,7 +546,13 @@ USING(
           NULL as [demographic_5],
 
           /*'wildcard' contact fields that are custom per client*/
-          NULL as [attribute_1],
+          CASE
+            WHEN [custom_fields_comms_preference] = 'Mailing Opt-In'
+              OR CHARINDEX('Mailing Opt-In', tags)>0
+            THEN 1
+            ELSE 0
+          END as [attribute_1],
+
           NULL as [attribute_2],
           NULL as [attribute_3],
           NULL as [attribute_4],
