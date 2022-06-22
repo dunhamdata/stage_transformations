@@ -88,7 +88,7 @@
 	CASE
 		WHEN LEN([succeeded_at])<=0
       OR [succeeded_at] IS NULL
-    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+    THEN CAST('1901-01-01 00:00:00.0000000' as datetime2)
 		ELSE CAST([succeeded_at] as datetime2)
 	END AS [gift_date],
 
