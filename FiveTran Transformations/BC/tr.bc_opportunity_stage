@@ -283,9 +283,17 @@
 
             /*adding arena_static_id_c field for pairing to .gift and .contact*/
             LEFT JOIN (
-              SELECT DISTINCT [static_arena_id_c] as [static_id],
-                     [id] as [sf_account_id]
-              FROM Dunham.bc_sf.account
+              SELECT [id] as [sf_account_id],
+				     [static_id]
+              FROM Dunham.bc_sf.account a
+          			  LEFT JOIN(
+          				SELECT DISTINCT id as contact_id,
+          					account_id as account_id,
+          					[static_arena_id_c] as [static_id],
+          					ROW_NUMBER() OVER (PARTITION BY [account_id] ORDER BY [static_arena_id_c]) as row_id
+          				FROM Dunham.bc_sf.contact
+          				) sf on sf.account_id = a.id
+          			where row_id = 1
             ) sfc on sfc.[sf_account_id] = o.[account_id]
 
             WHERE [id] is not null and is_deleted = 0
