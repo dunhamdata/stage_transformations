@@ -79,14 +79,14 @@
             CASE
               WHEN LEN([created_date])<=0
                 OR [created_date] IS NULL
-              THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+              THEN NULL
               ELSE CAST([created_date] as datetime2)
             END AS [created_date],
 
             CASE
               WHEN LEN([installment_start_date_c])<=0
                 OR [installment_start_date_c] IS NULL
-              THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+              THEN CAST([created_date] as datetime2)
               ELSE CAST([installment_start_date_c] as datetime2)
             END AS [installment_start_date],
 
@@ -105,8 +105,7 @@
             END AS [amount_committed],
 
             CASE
-              WHEN LEN([amount_received])<=0
-                OR [amount_received] IS NULL
+              WHEN [amount_received] IS NULL
               THEN 0
               ELSE CAST([amount_received] as float)
             END AS [amount_received],
@@ -126,7 +125,6 @@
                       OR [stage_name] = 'Closed Lost')
               THEN 'One-Time'
               WHEN [installment_period_c] is null
-                AND [stage_name]='Funding'
               THEN 'Yearly'
               ELSE CAST([installment_period_c] as varchar(max))
             END AS [installment_period],
@@ -135,14 +133,6 @@
         /*calculating installment counts based on created and close dates*/
 
           CASE
-          		WHEN [stage_name] <> 'Funding'
-                OR [stage_name] <> 'Closed Lost'
-                OR [stage_name] <> 'Closed Won'
-                OR [stage_name] <> 'Written Commitment'
-                OR [stage_name] <> 'Verbal Commitment'
-                OR [stage_name] <> 'Proposal Sent'
-              THEN NULL
-
           		WHEN ([stage_name] = 'Closed Won'
                   OR [stage_name] = 'Closed Lost')
                 AND [no_of_expected_payments_installments_c] is null
@@ -151,36 +141,31 @@
           	/*creates estimated number of installments based on [created_date] and indexed end date based on installment frequencies is blank and start date exists*/
 
           		/*assumes yearly installment cadence if not listed and determines years between start and end date*/
-          		 WHEN [stage_name] = 'Funding'
-                AND [no_of_expected_payments_installments_c] is null
+          		 WHEN [no_of_expected_payments_installments_c] is null
                 AND [installment_period_c] is null
                 AND [installment_start_date_c] is not null
           		 THEN ABS(DATEDIFF(year, [close_date], [installment_start_date_c]))
 
           		/*determines months between start and end date when on monthly schedule*/
-          		WHEN [stage_name]='Funding'
-                AND [no_of_expected_payments_installments_c] is null
+          		WHEN [no_of_expected_payments_installments_c] is null
                 AND [installment_period_c]='Monthly'
                 AND [installment_start_date_c] is not null
           		THEN ABS(DATEDIFF(month, [close_date], [installment_start_date_c]))
 
           		/*determines years between start and end date when on yearly schedule*/
-          		WHEN [stage_name]='Funding'
-                AND [no_of_expected_payments_installments_c] is null
+          		WHEN [no_of_expected_payments_installments_c] is null
                 AND [installment_period_c]='Yearly'
                 AND [installment_start_date_c] is not null
           		THEN ABS(DATEDIFF(year, [close_date], [installment_start_date_c]))
 
           	   /*determines quarters between start and end date when on quarterly schedule*/
-          	    WHEN [stage_name]='Funding'
-                  AND [no_of_expected_payments_installments_c] is null
+          	    WHEN [no_of_expected_payments_installments_c] is null
                   AND [installment_period_c]='Quarterly'
                   AND [installment_start_date_c] is not null
           			THEN ABS(DATEDIFF(quarter, [close_date], [installment_start_date_c]))
 
           	   /*determines weeks between start and end date when on weekly schedule*/
-          	    WHEN [stage_name]='Funding'
-                  AND [no_of_expected_payments_installments_c] is null
+          	    WHEN [no_of_expected_payments_installments_c] is null
                   AND [installment_period_c]='Weekly'
                   AND [installment_start_date_c] is not null
           			THEN ABS(DATEDIFF(week, [close_date], [installment_start_date_c]))
@@ -189,36 +174,31 @@
           	/*creates estimated number of installments based on [created_date] and indexed end date based on installment frequencies and start date is blank*/
 
           		/*assumes yearly installment cadence if not listed and determines years between start and end date*/
-          		 WHEN [stage_name] = 'Funding'
-                AND [no_of_expected_payments_installments_c] is null
+          		 WHEN [no_of_expected_payments_installments_c] is null
                 AND [installment_period_c] is null
                 AND [installment_start_date_c] is null
           		 THEN ABS(DATEDIFF(year, [close_date], [created_date]))
 
           		/*determines months between start and end date when on monthly schedule*/
-          		WHEN [stage_name]='Funding'
-                AND [no_of_expected_payments_installments_c] is null
+          		WHEN [no_of_expected_payments_installments_c] is null
                 AND [installment_period_c]='Monthly'
                 AND [installment_start_date_c] is null
           		THEN ABS(DATEDIFF(month, [close_date], [created_date]))
 
           		/*determines years between start and end date when on yearly schedule*/
-          		WHEN [stage_name]='Funding'
-                AND [no_of_expected_payments_installments_c] is null
+          		WHEN [no_of_expected_payments_installments_c] is null
                 AND [installment_period_c]='Yearly'
                 AND [installment_start_date_c] is null
           		THEN ABS(DATEDIFF(year, [close_date], [created_date]))
 
           	   /*determines quarters between start and end date when on quarterly schedule*/
-          	    WHEN [stage_name]='Funding'
-                  AND [no_of_expected_payments_installments_c] is null
+          	    WHEN [no_of_expected_payments_installments_c] is null
                   AND [installment_period_c]='Quarterly'
                   AND [installment_start_date_c] is null
           			THEN ABS(DATEDIFF(quarter, [close_date], [created_date]))
 
           	   /*determines weeks between start and end date when on weekly schedule*/
-          	    WHEN [stage_name]='Funding'
-                  AND [no_of_expected_payments_installments_c] is null
+          	    WHEN [no_of_expected_payments_installments_c] is null
                   AND [installment_period_c]='Weekly'
                   AND [installment_start_date_c] is null
           			THEN ABS(DATEDIFF(week, [close_date], [created_date]))
