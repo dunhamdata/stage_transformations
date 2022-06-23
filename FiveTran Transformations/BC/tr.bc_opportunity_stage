@@ -1,9 +1,9 @@
 /*===========================================================================================================================================
  Procedure:   bc opportunity transformation
- Create date: 2022-04-22
+ Create date: 2022-06-22
  Description:  Converts RAW export data names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[bc_sf].[opportunity],[Dunham].[bc_sf].[campaign], [Dunham].[bc_sf].[contact], [Dunham].[bc].[contact], [Dunham].[bc_sf].[npe_01_opp_payment_c]
+ Parameter(s): [Dunham].[bc_sf].[opportunity],[Dunham].[bc_sf].[campaign], [Dunham].[bc_sf].[account], [Dunham].[bc_sf].[npe_01_opp_payment_c]
  Return Value(s): [Dunham].[bc].[opportunity_stage]
  Programming Notes:
 
@@ -12,7 +12,7 @@
       X    [cs_opportunity_id] = Dunham.bc_sf.opportunity.id
       X    ,[account_id] = Dunham.bc_sf.opportunity.account_id
       X    ,[cs_account_id]
-         ,[uid] = select [uid] from Dunham.bc.contact where Dunham.bc_sf.opportunity.contact_id = Dunham.bc_sf.contact.[unique_id_c] = Dunham.bc.contact.advid
+      X    ,[static_id] = select [static_id] from Dunham.bc.contact where Dunham.bc_sf.opportunity.contact_id = Dunham.bc_sf.contact.[unique_id_c] = Dunham.bc.contact.advid
       X    ,[opportunity_id]
       X    ,[opportunity_name] = Dunham.bc_sf.opportunity.name
       X    ,[created_date] = Dunham.bc_sf.opportunity.created_date
@@ -41,11 +41,11 @@
 
 /*if staging table doesn't exist, create it*/
 
- IF OBJECT_ID('Dunham.bc.gift_stage') IS NULL
+ IF OBJECT_ID('Dunham.bc.opportunity_stage') IS NULL
 
   CREATE TABLE [Dunham].[bc].[opportunity_stage](
- 	[fk_constituent_id] varchar(200) NULL,
- 	[pk_opp_id] varchar(200) NOT NULL PRIMARY KEY,
+  [pk_opp_id] varchar(200) NOT NULL PRIMARY KEY,
+  [fk_constituent_id] varchar(200) NULL,
   [opp_name] [varchar](max) NULL,
  	[created_date] [datetime2] NOT NULL,
   [installment_start_date] datetime2 NULL,
@@ -61,188 +61,267 @@
   [last_modified_date] datetime2 NULL
      ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
 
- MERGE [Dunham].[bc].[gift_stage] WITH (HOLDLOCK) as target
+ MERGE [Dunham].[bc].[opportunity_stage] WITH (HOLDLOCK) as target
  USING(
+     SELECT DISTINCT
 
-   SELECT DISTINCT
+            CAST([id] as varchar(200)) AS [pk_opp_id],
 
-   CAST([id] as varchar(200)) AS [pk_opp_id],
+            CAST([static_id] as varchar(200)) AS [fk_constituent_id],
 
-  /*overwrites constituent_id with passthrough_id when available*/
-	CASE
-		[uid] AS [fk_constituent_id],
+            CASE
+              WHEN LEN([name])<=0
+                OR [name] IS NULL
+              THEN NULL
+              ELSE CAST([name] as varchar(max))
+            END AS [opp_name],
 
-	CASE
-		WHEN LEN([created_date])<=0
-      OR [created_date] IS NULL
-    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
-		ELSE CAST([created_date] as datetime2)
-	END AS [created_date],
+            CASE
+              WHEN LEN([created_date])<=0
+                OR [created_date] IS NULL
+              THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+              ELSE CAST([created_date] as datetime2)
+            END AS [created_date],
 
-  CASE
-		WHEN LEN([installment_start_date])<=0
-      OR [installment_start_date] IS NULL
-    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
-		ELSE CAST([installment_start_date] as datetime2)
-	END AS [installment_start_date],
+            CASE
+              WHEN LEN([installment_start_date_c])<=0
+                OR [installment_start_date_c] IS NULL
+              THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+              ELSE CAST([installment_start_date_c] as datetime2)
+            END AS [installment_start_date],
 
-  CASE
-		WHEN LEN([close_date])<=0
-      OR [close_date] IS NULL
-    THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
-		ELSE CAST([close_date] as datetime2)
-	END AS [close_date],
+            CASE
+              WHEN LEN([close_date])<=0
+                OR [close_date] IS NULL
+              THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
+              ELSE CAST([close_date] as datetime2)
+            END AS [close_date],
 
-	CASE
-    WHEN LEN([amount])<=0
-      OR [amount] IS NULL
-    THEN 0
-    ELSE CAST([amount] as float)
-  END AS [amount_committed],
+            CASE
+              WHEN LEN([amount])<=0
+                OR [amount] IS NULL
+              THEN 0
+              ELSE CAST([amount] as float)
+            END AS [amount_committed],
 
-  CASE
-    WHEN LEN([amount_received])<=0
-      OR [amount_received] IS NULL
-    THEN 0
-    ELSE CAST([amount_received] as float)
-  END AS [amount_received],
+            CASE
+              WHEN LEN([amount_received])<=0
+                OR [amount_received] IS NULL
+              THEN 0
+              ELSE CAST([amount_received] as float)
+            END AS [amount_received],
 
-	CASE
-    WHEN LEN([campaign_name])<=0
-      OR [campaign_name] IS NULL
-    THEN NULL
-    ELSE CAST([campaign_name] as varchar(max))
-  END AS [campaign],
+            CASE
+              WHEN LEN([payments_received])<=0
+                OR [payments_received] IS NULL
+              THEN NULL
+              ELSE CAST([payments_received] as int)
+            END AS [no_payments_received],
 
-	CASE
-    WHEN LEN([name])<=0
-      OR [name] IS NULL
-    THEN NULL
-    ELSE CAST([name] as varchar(max))
-  END AS [opp_name],
-
-  CASE
-    WHEN LEN([stage])<=0
-      OR [stage] IS NULL
-    THEN NULL
-    ELSE CAST([stage] as varchar(max))
-  END AS [stage],
-
-  CASE
-    WHEN LEN([owner])<=0
-      OR [owner] IS NULL
-    THEN NULL
-    ELSE CAST([owner] as varchar(max))
-  END AS [opp_owner],
-
-  CASE
-    WHEN LEN([installment_period_c])<=0
-      OR [installment_period_c] IS NULL
-    THEN NULL
-    ELSE CAST([installment_period_c] as varchar(max))
-  END AS [installment_period],
-
-  CASE
-    WHEN LEN([no_of_expected_payments_installments_c])<=0
-      OR [no_of_expected_payments_installments_c] IS NULL
-    THEN NULL
-    ELSE CAST([no_of_expected_payments_installments_c] as int)
-  END AS [installment_count],
-
-  CASE
-    WHEN LEN([payments_received])<=0
-      OR [payments_received] IS NULL
-    THEN NULL
-    ELSE CAST([payments_received] as int)
-  END AS [no_payments_received]
-
-  FROM [Dunham].[bc_sf].[opportunity] o
-  WHERE [id] is not null
-
- /*calculating received payment counts and amounts*/
-
-  LEFT JOIN (
-    select count(id) as [payments_received],
-           sum(npe_01_payment_amount_c) as [amount_received]
-    from Dunham.bc_sf.npe_01_opp_payment_c
-
-  ) p on p.[npe_01_opportunity_c] = o.[id]
-
- /*adding campaign name to opportunity table*/
-
-  LEFT JOIN (
-    select id as [campaign_id],
-           name as [campaign_name]
-    from Dunham.bc_sf.campaign
-  ) c on campaign_id = o.[campaign_id]
-
- /*adding opportunity owner to opportunity table*/
-  LEFT JOIN (
-    select id as [owner_id],
-           name as [owner]
-    from Dunham.bc_sf.user
-  ) c on owner_id = o.[owner_id]
-
-  /*converts [Dunham].[bc_sf].[npe_01_opp_payment_c].[contact_id] to [Dunham].[bc].[contact].[uid]
-
-  LEFT JOIN (
+            CASE
+              WHEN (LEN([installment_period_c])<=0
+                      OR [installment_period_c] IS NULL
+                      OR [installment_period_c] = '')
+                AND ([stage_name] = 'Closed Won'
+                      OR [stage_name] = 'Closed Lost')
+              THEN 'One-Time'
+              WHEN [installment_period_c] is null
+                AND [stage_name]='Funding'
+              THEN 'Yearly'
+              ELSE CAST([installment_period_c] as varchar(max))
+            END AS [installment_period],
 
 
+        /*calculating installment counts based on created and close dates*/
 
-  )
+          CASE
+          		WHEN [stage_name] <> 'Funding'
+                OR [stage_name] <> 'Closed Lost'
+                OR [stage_name] <> 'Closed Won'
+                OR [stage_name] <> 'Written Commitment'
+                OR [stage_name] <> 'Verbal Commitment'
+                OR [stage_name] <> 'Proposal Sent'
+              THEN NULL
 
+          		WHEN ([stage_name] = 'Closed Won'
+                  OR [stage_name] = 'Closed Lost')
+                AND [no_of_expected_payments_installments_c] is null
+              THEN 1
+
+          	/*creates estimated number of installments based on [created_date] and indexed end date based on installment frequencies is blank and start date exists*/
+
+          		/*assumes yearly installment cadence if not listed and determines years between start and end date*/
+          		 WHEN [stage_name] = 'Funding'
+                AND [no_of_expected_payments_installments_c] is null
+                AND [installment_period_c] is null
+                AND [installment_start_date_c] is not null
+          		 THEN ABS(DATEDIFF(year, [close_date], [installment_start_date_c]))
+
+          		/*determines months between start and end date when on monthly schedule*/
+          		WHEN [stage_name]='Funding'
+                AND [no_of_expected_payments_installments_c] is null
+                AND [installment_period_c]='Monthly'
+                AND [installment_start_date_c] is not null
+          		THEN ABS(DATEDIFF(month, [close_date], [installment_start_date_c]))
+
+          		/*determines years between start and end date when on yearly schedule*/
+          		WHEN [stage_name]='Funding'
+                AND [no_of_expected_payments_installments_c] is null
+                AND [installment_period_c]='Yearly'
+                AND [installment_start_date_c] is not null
+          		THEN ABS(DATEDIFF(year, [close_date], [installment_start_date_c]))
+
+          	   /*determines quarters between start and end date when on quarterly schedule*/
+          	    WHEN [stage_name]='Funding'
+                  AND [no_of_expected_payments_installments_c] is null
+                  AND [installment_period_c]='Quarterly'
+                  AND [installment_start_date_c] is not null
+          			THEN ABS(DATEDIFF(quarter, [close_date], [installment_start_date_c]))
+
+          	   /*determines weeks between start and end date when on weekly schedule*/
+          	    WHEN [stage_name]='Funding'
+                  AND [no_of_expected_payments_installments_c] is null
+                  AND [installment_period_c]='Weekly'
+                  AND [installment_start_date_c] is not null
+          			THEN ABS(DATEDIFF(week, [close_date], [installment_start_date_c]))
+
+
+          	/*creates estimated number of installments based on [created_date] and indexed end date based on installment frequencies and start date is blank*/
+
+          		/*assumes yearly installment cadence if not listed and determines years between start and end date*/
+          		 WHEN [stage_name] = 'Funding'
+                AND [no_of_expected_payments_installments_c] is null
+                AND [installment_period_c] is null
+                AND [installment_start_date_c] is null
+          		 THEN ABS(DATEDIFF(year, [close_date], [created_date]))
+
+          		/*determines months between start and end date when on monthly schedule*/
+          		WHEN [stage_name]='Funding'
+                AND [no_of_expected_payments_installments_c] is null
+                AND [installment_period_c]='Monthly'
+                AND [installment_start_date_c] is null
+          		THEN ABS(DATEDIFF(month, [close_date], [created_date]))
+
+          		/*determines years between start and end date when on yearly schedule*/
+          		WHEN [stage_name]='Funding'
+                AND [no_of_expected_payments_installments_c] is null
+                AND [installment_period_c]='Yearly'
+                AND [installment_start_date_c] is null
+          		THEN ABS(DATEDIFF(year, [close_date], [created_date]))
+
+          	   /*determines quarters between start and end date when on quarterly schedule*/
+          	    WHEN [stage_name]='Funding'
+                  AND [no_of_expected_payments_installments_c] is null
+                  AND [installment_period_c]='Quarterly'
+                  AND [installment_start_date_c] is null
+          			THEN ABS(DATEDIFF(quarter, [close_date], [created_date]))
+
+          	   /*determines weeks between start and end date when on weekly schedule*/
+          	    WHEN [stage_name]='Funding'
+                  AND [no_of_expected_payments_installments_c] is null
+                  AND [installment_period_c]='Weekly'
+                  AND [installment_start_date_c] is null
+          			THEN ABS(DATEDIFF(week, [close_date], [created_date]))
+
+          		ELSE ABS(CAST([no_of_expected_payments_installments_c] as int)) END AS [installment_count],
+
+            CASE
+              WHEN LEN([campaign_name])<=0
+                OR [campaign_name] IS NULL
+              THEN NULL
+              ELSE CAST([campaign_name] as varchar(max))
+            END AS [campaign],
+
+            CASE
+              WHEN LEN([owner])<=0
+                OR [owner] IS NULL
+              THEN NULL
+              ELSE CAST([owner] as varchar(max))
+            END AS [opp_owner],
+
+            CASE
+              WHEN LEN([stage_name])<=0
+                OR [stage_name] IS NULL
+              THEN NULL
+              ELSE CAST([stage_name] as varchar(max))
+            END AS [stage]
+
+
+
+            FROM [Dunham].[bc_sf].[opportunity] o
+
+
+            /*calculating received payment counts and amounts*/
+
+            LEFT JOIN (
+                  select distinct [npe_01_opportunity_c],
+                     count(id) as [payments_received],
+                         sum(npe_01_payment_amount_c) as [amount_received]
+                  from [Dunham].[bc_sf].[npe_01_opp_payment_c]
+                group by [npe_01_opportunity_c]
+
+            ) p on p.[npe_01_opportunity_c] = o.[id]
+
+
+            /*adding campaign name to opportunity table*/
+
+            LEFT JOIN (
+                select id as [campaign_id],
+                       name as [campaign_name]
+                from Dunham.bc_sf.campaign
+            ) c on c.campaign_id = o.[campaign_id]
+
+
+            /*adding opportunity owner to opportunity table*/
+            LEFT JOIN (
+              select id as [owner_id],
+                     name as [owner]
+              from Dunham.bc_sf.[user]
+            ) u on u.owner_id = o.[owner_id]
+
+
+
+            /*adding arena_static_id_c field for pairing to .gift and .contact*/
+            LEFT JOIN (
+              SELECT DISTINCT [static_arena_id_c] as [static_id],
+                     [id] as [sf_account_id]
+              FROM Dunham.bc_sf.account
+            ) sfc on sfc.[sf_account_id] = o.[account_id]
+
+            WHERE [id] is not null and is_deleted = 0
   ) as source
 
   ON (target.[pk_opp_id] = source.[pk_opp_id] collate SQL_Latin1_General_CP1_CI_AS)
 
   /*inserts .opportunity rows that are not found in .opportunity_stage rows*/
   WHEN NOT MATCHED BY target
-    THEN INSERT ([fk_constituent_id], [pk_opp_id], [secondary_gift_id], [gift_date], [gift_amount], [appeal_code],
-                [appeal_name], [segment_code], [segment_name], [fund_code], [fund_name], [premium_code], [premium_name],
-                [media_code], [media_type], [gift_type], [utm_campaign],  [utm_content], [utm_medium], [utm_source], [utm_term],
-                [crm], [attribute_1], [attribute_2], [attribute_3], [attribute_4], [attribute_5], [client_acronym],
-                [fk_client_gift_id], [fk_client_constituent_id], [last_modified_date])
+    THEN INSERT ([fk_constituent_id], [pk_opp_id], [opp_name], [created_date], [installment_start_date], [close_date], [amount_committed], [amount_received],
+                 [no_payments_received], [installment_count], [installment_period], [campaign], [opp_owner], [stage], [last_modified_date])
 
-         VALUES (source.[fk_constituent_id], source.[pk_opp_id], source.[secondary_gift_id], source.[gift_date], source.[gift_amount], source.[appeal_code],
-                    source.[appeal_name], source.[segment_code], source.[segment_name], source.[fund_code], source.[fund_name], source.[premium_code], source.[premium_name],
-                    source.[media_code], source.[media_type], source.[gift_type], source.[utm_campaign],  source.[utm_content], source.[utm_medium], source.[utm_source], source.[utm_term],
-                    source.[crm], [attribute_1], source.[attribute_2], source.[attribute_3], source.[attribute_4], source.[attribute_5], source.[client_acronym],
-                    source.[fk_client_gift_id], source.[fk_client_constituent_id], NULL)
+         VALUES (source.[fk_constituent_id], source.[pk_opp_id], source.[opp_name], source.[created_date], source.[installment_start_date], source.[close_date],
+                source.[amount_committed], source.[amount_received], source.[no_payments_received], source.[installment_count], source.[installment_period],
+                source.[campaign], source.[opp_owner], source.[stage], NULL)
 
 
-  /*removes rows from .gift_stage that do not match .gift*/
+  /*removes rows from .opportunity_stage that do not match .opportunity*/
   WHEN NOT MATCHED BY source
   THEN DELETE
 
 
-  /*updates .gift_stage rows with matching .gift.pk_opp_id with .gift data*/
+  /*updates .gift_stage rows with matching .opportunity_stage.pk_opp_id with .opportunity data*/
   WHEN MATCHED THEN UPDATE SET
-                    target.[fk_constituent_id]=source.[fk_constituent_id],
-                    target.[pk_opp_id]=source.[pk_opp_id],
-                    target.[secondary_gift_id]=source.[secondary_gift_id],
-                    target.[gift_date]=source.[gift_date],
-                    target.[gift_amount]=source.[gift_amount],
-                    target.[appeal_code]=source.[appeal_code],
-                    target.[appeal_name]=source.[appeal_name],
-                    target.[segment_code]=source.[segment_code],
-                    target.[segment_name]=source.[segment_name],
-                    target.[fund_code]=source.[fund_code],
-                    target.[fund_name]=source.[fund_name],
-                    target.[premium_code]=source.[premium_code],
-                    target.[premium_name] = source.[premium_name],
-                    target.[media_code]=source.[media_code],
-                    target.[media_type]=source.[media_type],
-                    target.[gift_type]=source.[gift_type],
-                    target.[utm_campaign]=source.[utm_campaign],
-                    target.[utm_content]=source.[utm_content],
-                    target.[utm_medium]=source.[utm_medium],
-                    target.[utm_source]=source.[utm_source],
-                    target.[utm_term]=source.[utm_term],
-                    target.[crm] = source.[crm],
-                    target.[attribute_1]=source.[attribute_1],
-                    target.[attribute_2]=source.[attribute_2],
-                    target.[attribute_3]=source.[attribute_3],
-                    target.[attribute_4]=source.[attribute_4],
-                    target.[attribute_5]=source.[attribute_5],
-                    target.[fk_client_constituent_id]=source.[fk_client_constituent_id],
+                    target.[fk_constituent_id] = source.[fk_constituent_id],
+                   	target.[pk_opp_id] = source.[pk_opp_id],
+                    target.[opp_name] = source.[opp_name],
+                   	target.[created_date] = source.[created_date],
+                    target.[installment_start_date] = source.[installment_start_date],
+                   	target.[close_date] = source.[close_date],
+                   	target.[amount_committed] = source.[amount_committed],
+                   	target.[amount_received] = source.[amount_received],
+                   	target.[no_payments_received] = source.[no_payments_received],
+                   	target.[installment_count] = source.[installment_count],
+                   	target.[installment_period] = source.[installment_period],
+                   	target.[campaign] = source.[campaign],
+                   	target.[opp_owner] = source.[opp_owner],
+                   	target.[stage] = source.[stage],
                     target.[last_modified_date] = GETDATE();
