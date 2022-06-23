@@ -68,10 +68,10 @@
 
   /*overwrites constituent_id with passthrough_id when available*/
 	CASE
-		WHEN LEN([uid])<=0
-      OR [uid] IS NULL
+		WHEN LEN([static_id])<=0
+      OR [static_id] IS NULL
     THEN CAST('DC007' as varchar(200))
-		ELSE CAST([uid] as varchar(200))
+		ELSE CAST([static_id] as varchar(200))
 	END AS [fk_constituent_id],
 
   /*typically used for legacy gift id in CRM*/
@@ -240,11 +240,11 @@
 
   /*creates unique constituent_id for aggregate gift table FK, used as FK in gift_stage*/
 	CASE
-    WHEN LEN([uid])<=0
-      OR [uid] IS NULL
-      OR [uid] = ''
+    WHEN LEN([static_id])<=0
+      OR [static_id] IS NULL
+      OR [static_id] = ''
     THEN CAST(CONCAT(UPPER('bc'),'_DC007') as varchar(210))
-    ELSE CAST(CONCAT(UPPER('bc'),'_',[uid]) as varchar(210))
+    ELSE CAST(CONCAT(UPPER('bc'),'_',[static_id]) as varchar(210))
   END AS [fk_client_constituent_id]
 
   FROM [Dunham].[bc].[gift]
