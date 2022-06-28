@@ -29,6 +29,7 @@
                  4. Global Opt-out tag
                  5. No direct mail tag
                  6. Newsletter Only tag
+                 7. Excluding address_line_1 = '-'
 
                  Newsletter exclusions:
                  1. address is blank
@@ -37,6 +38,7 @@
                CUSTOM EXCLUSIONS:
                  4. Global Opt-out tag
                  5. No direct mail tag
+                 6. Excluding address_line_1 = '-'
 
                  Email exclusions:
                  1. primary and secondary email are blank
@@ -409,6 +411,7 @@ USING(
 
         /*excludes blank addresses*/
         WHEN [contact_addresses_address_1] IS NULL
+          OR [contact_addresses_address_1] = '-'
         THEN 0
 
         /*excludes foreign addresses - US*/
@@ -443,6 +446,7 @@ USING(
 
         /*excludes blank addresses*/
         WHEN [contact_addresses_address_1] IS NULL
+          OR [contact_addresses_address_1] = '-'
         THEN 0
 
         /*excludes foreign addresses - US*/
