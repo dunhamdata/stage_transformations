@@ -130,16 +130,16 @@ USING(
 
             /*contact_type is customized by client*/
             CASE
-                WHEN [status_code] = 'P1'
-                  OR [status_code] = 'P1A'
-                  OR [status_code] = 'P1B'
-                  OR [status_code] = 'P1C'
-                  OR [status_code] = 'P1D'
+                WHEN UPPER([status_code]) = 'P1'
+                  OR UPPER([status_code]) = 'P1A'
+                  OR UPPER([status_code]) = 'P1B'
+                  OR UPPER([status_code]) = 'P1C'
+                  OR UPPER([status_code]) = 'P1D'
                 THEN 'Non-PBC Partner'
-                WHEN [status_code] = 'P2'
+                WHEN UPPER([status_code]) = 'P2'
                 THEN 'Lapsed Partner'
-                WHEN [status_code] = 'P3'
-                  OR [status_code] = 'P4'
+                WHEN UPPER([status_code]) = 'P3'
+                  OR UPPER([status_code]) = 'P4'
                 THEN 'PBC Partner'
                 ELSE 'Donor'
               END as [contact_type],
