@@ -28,7 +28,7 @@
                CUSTOM EXCLUSIONS:
                  4. Global Opt-out tag
                  5. Newsletter Only tag
-                 6. Excluding address_line_1 = '-'
+                 6. Excluding address_line_1 = ' '
                  7. Direct Mail Opt-out
 
 
@@ -39,7 +39,7 @@
                CUSTOM EXCLUSIONS:
                  4. Global Opt-out tag
                  5. Direct Mail Opt-out tag
-                 6. Excluding address_line_1 = '-'
+                 6. Excluding address_line_1 = ' '
 
                  Email exclusions:
                  1. primary and secondary email are blank
@@ -422,13 +422,14 @@ USING(
 
             /*excludes blank addresses*/
             WHEN [contact_addresses_address_1] IS NULL
-              OR [contact_addresses_address_1] = '-'
+              OR [contact_addresses_address_1] = ' '
             THEN 0
 
             /*excludes foreign addresses - US*/
             WHEN [country_code] IS NOT NULL
               AND (UPPER([country_code]) <> 'US')
             THEN 0
+
             WHEN [country_code] IS NULL
               AND [contact_addresses_country] IS NOT NULL
               AND (UPPER([contact_addresses_country]) <> 'US'
@@ -457,13 +458,14 @@ USING(
 
             /*excludes blank addresses*/
             WHEN [contact_addresses_address_1] IS NULL
-              OR [contact_addresses_address_1] = '-'
+              OR [contact_addresses_address_1] = ' '
             THEN 0
 
             /*excludes foreign addresses - US*/
             WHEN [country_code] IS NOT NULL
               AND (UPPER([country_code]) <> 'US')
             THEN 0
+
             WHEN [country_code] IS NULL
               AND [contact_addresses_country] IS NOT NULL
               AND (UPPER([contact_addresses_country]) <> 'US'
@@ -492,6 +494,7 @@ USING(
             WHEN [primary_email] IS NULL
               AND [secondary_email] IS NULL
             THEN 0
+
 
             /*excludes deceased - default as date entry*/
             WHEN [contact_individuals_is_deceased] = 1
