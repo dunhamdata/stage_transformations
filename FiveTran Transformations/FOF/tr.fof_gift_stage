@@ -99,7 +99,7 @@
     WHEN LEN([created_at])<=0
      OR [created_at] IS NULL
     THEN CAST('1901-01-01 00:00:00.0000000' as datetime2)
-    ELSE CAST([created_at] as datetime2)
+    ELSE CAST(CAST([created_at] as date) as datetime2)
     END AS [gift_date],
 
     CASE
