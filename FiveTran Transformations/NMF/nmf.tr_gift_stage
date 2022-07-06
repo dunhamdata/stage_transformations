@@ -11,7 +11,8 @@
 
                 Gift Type:
                 1. BioEdge Donation: if segment = 'BioEdge'
-                2. Regular Donation: if none of the above are true
+                2. MercatorNet Donation: if segment = 'MercatorNet'
+                3. Regular Donation: if none of the above are true
 
 
 
@@ -176,6 +177,8 @@
   CASE
 		WHEN [segment]='BioEdge'
     THEN 'BioEdge Donation'
+    WHEN [segment] = 'MercatorNet'
+    THEN 'MercatorNet Donation'
 		ELSE 'Regular Donation'
 	END AS [gift_type],
 
