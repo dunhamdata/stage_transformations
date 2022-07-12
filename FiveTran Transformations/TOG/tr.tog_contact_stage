@@ -178,9 +178,9 @@ USING(
       END as [suffix],
 
 			CASE
-				WHEN [contact_individuals_create_date_time_utc] IS NULL
+				WHEN [create_date_time_utc] IS NULL
         THEN CAST('1901-01-01 13:14:15.0000000' as datetime2)
-				ELSE CAST([contact_individuals_create_date_time_utc] as datetime2)
+				ELSE CAST([create_date_time_utc] as datetime2)
 			END as [account_created_date],
 
 			CASE
