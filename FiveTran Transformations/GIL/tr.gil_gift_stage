@@ -10,9 +10,10 @@
       **Only records with an ID will be processed
 
                 Gift Type:
-                1. Premium Donation: if premium_code is not NULL
-                2. Media Donation: if media_outlet is not null
-                3. Regular Donation: none of the above are true
+                1. Recurring Donation: if [recurring_gift_payments_gift_id] is not null
+                2. Premium Donation: if premium_code is not NULL
+                3. Media Donation: if media_outlet is not null
+                4. Regular Donation: none of the above are true
 
 
 
@@ -172,7 +173,9 @@
 
   /*can be custom designated by client; these are default selections*/
   CASE
-		WHEN LEN([gift_premiums_premium_id])>0
+    WHEN [recurring_gift_payments_gift_id] is not null 
+    THEN 'Recurring Donation'
+    WHEN LEN([gift_premiums_premium_id])>0
     THEN 'Premium Donation'
     WHEN [media_outlet] is not NULL
     THEN 'Media Donation'

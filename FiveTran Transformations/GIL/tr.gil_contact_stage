@@ -3,14 +3,15 @@
  Create date: 2022-06-16
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[gil].[contact], [Dunham].[geo].[us_postal_codes_to_markets], [Dunham].[geo].[geonames_postal_code_all]
+ Parameter(s): [Dunham].[gil].[contact], [Dunham].[geo].[us_postal_codes_to_markets], [Dunham].[geo].[geonames_postal_code_all], [Dunham].[gil].[gift]
  Return Value(s): [Dunham].[gil].[contact_stage]
  Programming Notes:
 
  **Only rows with a ID will be brought in for analysis
 
            Contact Type:
-           1. Regular Donor: no contact types identified
+           1. Recurring Donor: id associated with contact_id in .gift table where recurring_gift_payments_gift_id is not null
+           2. Regular Donor: none of the above is true
 
            Demographic Columns:
            1. Gender
@@ -129,12 +130,11 @@ USING(
           END as [company_name],
 
           /*contact_type is customized by client*/
-          /*CASE
-            WHEN [attribute_1]='AUS' THEN 'AUS Donor'
-            WHEN [attribute_1]='NZ' THEN 'NZ Donor'
+          CASE
+            WHEN [is_recurring] = 1
+            THEN 'Recurring Donor'
             ELSE 'Regular Donor'
-          END*/
-          'Regular Donor' as [contact_type],
+          END as [contact_type],
 
           /*this field is used to personalize communications*/
           CASE
@@ -575,6 +575,14 @@ USING(
             FROM [Dunham].[geo].[us_postal_codes_to_markets]
         ) us ON us.[us_postal] = LEFT([contact_addresses_postal],5)
 
+        /*joins gift table for recurring indicator*/
+
+           LEFT JOIN (
+             SELECT DISTINCT contact_id,
+             1 as [is_recurring]
+             FROM Dunham.gil.gift
+             where [recurring_gift_payments_gift_id] is not null
+           ) g on g.[contact_id] = c.[id]
 
         WHERE [id] IS NOT NULL and ([is_archived]<>1 OR [is_archived] IS NULL)) AS source
    ON (target.[pk_constituent_id] = source.[pk_constituent_id] collate SQL_Latin1_General_CP1_CI_AS)
