@@ -315,8 +315,11 @@ USING(
 
           /*start donor advancement specific data fields for filters*/
             CASE
-              WHEN LEN([owner])<=0
-                OR [owner] IS NULL
+              WHEN [owner] IS NULL
+                AND [static_arena_id_c] IS NOT NULL
+              THEN 'Mid Level'
+              WHEN [owner] IS NULL
+                AND [static_arena_id_c] IS NULL
               THEN NULL
               ELSE CAST([owner] as varchar(max))
             END as [portfolio],
@@ -354,15 +357,14 @@ USING(
             END as [wealth_score],
 
             /*WE p2g score = gift_score; formats p2g if '|' not found*/
-            /*CASE
-              WHEN LEN([gift_score])<=0
-                OR [gift_score] IS NULL
+            CASE
+              WHEN sf.[gift_score] IS NULL
               THEN NULL
-              WHEN CHARINDEX('|', [gift_score]) = 0
-              THEN CAST(CONCAT(LEFT([gift_score],1),'|',RIGHT([gift_score],1)) as varchar(max))
-              ELSE CAST([gift_score] as varchar(max))
-            END*/
-            NULL as [gift_score],
+              WHEN CHARINDEX('|', sf.[gift_score]) = 0
+              THEN CAST(CONCAT(LEFT(sf.[gift_score],1),'|',RIGHT(sf.[gift_score],1)) as varchar(max))
+              ELSE CAST(sf.[gift_score] as varchar(max))
+            END as [gift_score],
+
           /*end donor advancement specific columns*/
 
             /*custom by client, may contain true/false or date; output as bit/boolean
@@ -472,7 +474,7 @@ USING(
 
             /*only used when multiple CRM's are used to create data files*/
             CASE
-              WHEN [owner] is NULL
+              WHEN [static_arena_id_c] is NULL
               THEN 'Arena'
               ELSE 'Salesforce'
             END as [crm],
