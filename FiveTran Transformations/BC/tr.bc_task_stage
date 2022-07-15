@@ -1,0 +1,168 @@
+/*===========================================================================================================================================
+ Procedure:   bc opportunity transformation
+ Create date: 2022-06-22
+ Description:  Converts RAW export data names to standardized contact schema
+ Affected table(s):
+ Parameter(s): [Dunham].[bc_sf].[task], [Dunham].[bc_sf].[lead], [Dunham].[bc_sf].[contact], [Dunham].[bc_sf].[user]
+ Return Value(s): [Dunham].[bc].[task_stage]
+ Programming Notes:
+
+      **Only records with an ID will be processed
+
+
+
+
+
+
+
+ =============================================================================================================================================
+ SUMMARY OF CHANGES
+ Date (yyyy-mm-dd)		Author				Comments
+ ---------------------------------------------------------------------------------------------------------------------------------------------
+
+ ==============================================================================================================================================*/
+
+/*if staging table doesn't exist, create it*/
+
+ IF OBJECT_ID('Dunham.bc.task_stage') IS NULL
+
+  CREATE TABLE [Dunham].[bc].[task_stage](
+  [pk_task_id] varchar(200) NOT NULL PRIMARY KEY,
+  [fk_constituent_id] varchar(200) NULL,
+  [fk_opp_id] [varchar](200) NULL,
+ 	[subject] [varchar](max)  NULL,
+  [description] [varchar](max) NULL,
+ 	[status] [varchar](max) NULL,
+ 	[is_closed] [bit] NOT NULL,
+ 	[created_date] [datetime2] NULL,
+ 	[created_by] [varchar](max) NULL,
+ 	[last_modified_date] [datetime2] NULL,
+ 	[last_modified_by] [varchar](max) NULL,
+ 	[completed_date_time] [datetime2] NULL,
+ 	[task_type] [varchar](max) NULL,
+  [sys_last_modified_date] datetime2 NULL
+     ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+
+ MERGE [Dunham].[bc].[task_stage] WITH (HOLDLOCK) as target
+ USING(
+ /****** Returns all task information in Salesforce with contact/opportunity/lead info and portfolio assignment ******/
+
+  /*returns all tasks associated with opportunities*/
+
+        SELECT
+           CAST([id] as varchar(200)) as [pk_task_id]
+           ,CAST([uid] as varchar(200)) as [fk_constituent_id]
+
+         /*returns null if account_id = what_id*/
+          ,CASE
+          WHEN LEFT([what_id], 5) = '0010b'
+            OR LEFT([what_id], 5) = '0015a'
+          THEN NULL
+          ELSE CAST([what_id] as varchar(200))
+           END as [fk_opp_id]
+
+          ,CAST([subject] as varchar(max)) as [subject]
+          ,CAST([description] as varchar(max)) as [description]
+          ,CAST([status] as varchar(max)) as [status]
+          ,CAST([is_closed] as bit) as [is_closed]
+          ,CAST([created_date] as datetime2) as [created_date]
+          ,CAST([created_by] as varchar(max)) as [created_by]
+          ,CAST([last_modified_date] as datetime2) as [last_modified_date]
+          ,CAST([last_modified_by] as varchar(max)) as [last_modified_by]
+          ,CAST([completed_date_time] as datetime2) as [completed_date_time]
+
+          /*indexing subject to create task types designated by donor advancement*/
+
+          ,CASE
+          WHEN CHARINDEX('EMAIL',UPPER([subject])) > 0
+          THEN 'Email'
+          WHEN CHARINDEX('CALL',UPPER([subject])) > 0
+            OR CHARINDEX('TEXT',UPPER([subject])) > 0
+          THEN 'Call'
+          WHEN CHARINDEX('HAND',UPPER([subject])) > 0
+            OR CHARINDEX('THANK YOU NOTE',UPPER([subject])) > 0
+          THEN 'Handwritten Note'
+          WHEN CHARINDEX('MEET',UPPER([subject])) > 0
+            OR CHARINDEX('TRIP',UPPER([subject])) > 0
+          THEN 'Meeting'
+          WHEN CHARINDEX('LETTER',UPPER([subject])) > 0
+            OR CHARINDEX('MAIL',UPPER([subject])) > 0
+          THEN 'Mailing'
+          WHEN CHARINDEX('PAYMENT',UPPER([subject])) > 0
+          THEN 'Payment'
+          ELSE 'Other'
+          END as [task_type]
+        FROM [Dunham].[bc_sf].[task] t
+
+      /*joining user table info for created GO name*/
+
+       left join (
+          select
+            [id] as [owner_id],
+            [name] as [created_by]
+          from Dunham.bc_sf.[user]
+        ) u on u.[owner_id] = t.[created_by_id]
+
+       /*joining user table infor for modified GO name*/
+
+      left join (
+          select
+            [id] as [owner_id],
+            [name] as [last_modified_by]
+          from Dunham.bc_sf.[user]
+        ) m on m.[owner_id] = t.[last_modified_by_id]
+
+      /*combines lead and contact tables for all who_id's to join arena uid*/
+
+      left join (
+          select
+            [id] as [contact_id],
+            [static_arena_id_c] as [uid],
+            [account_id]
+          from Dunham.bc_sf.[contact]
+
+          UNION
+
+          select
+            [id] as [contact_id],
+            [static_arena_id_c] as [uid],
+            NULL as [account_id]
+          from Dunham.bc_sf.[lead]
+          where [is_converted] = 0
+        ) c ON c.[contact_id] = [who_id]
+
+  ) as source
+
+  ON (target.[pk_task_id] = source.[pk_task_id] collate SQL_Latin1_General_CP1_CI_AS)
+
+  /*inserts .opportunity rows that are not found in .task_stage rows*/
+  WHEN NOT MATCHED BY target
+    THEN INSERT ([fk_constituent_id], [pk_task_id], [fk_opp_id], [created_date], [created_by], [last_modified_date], [last_modified_by], [completed_date_time],
+                 [task_type], [is_closed], [status],  [description], [subject], [sys_last_modified_date])
+
+         VALUES (source.[fk_constituent_id], source.[pk_task_id], source.[fk_opp_id], source.[created_date], source.[created_by], source.[last_modified_date],
+                source.[last_modified_by], source.[completed_date_time], source.[task_type], source.[is_closed], source.[status],
+                 source.[description], source.[subject], NULL)
+
+
+  /*removes rows from .task_stage that do not match .task*/
+  WHEN NOT MATCHED BY source
+  THEN DELETE
+
+
+  /*updates .task_stage rows with matching .task_stage.pk_task_id with .opportunity data*/
+  WHEN MATCHED THEN UPDATE SET
+                    target.[fk_constituent_id] = source.[fk_constituent_id],
+                   	target.[pk_task_id] = source.[pk_task_id],
+                    target.[fk_opp_id] = source.[fk_opp_id],
+                   	target.[created_date] = source.[created_date],
+                    target.[created_by] = source.[created_by],
+                   	target.[last_modified_date] = source.[last_modified_date],
+                   	target.[last_modified_by] = source.[last_modified_by],
+                   	target.[completed_date_time] = source.[completed_date_time],
+                   	target.[task_type] = source.[task_type],
+                   	target.[is_closed] = source.[is_closed],
+                   	target.[status] = source.[status],
+                   	target.[description] = source.[description],
+                   	target.[subject] = source.[subject],
+                    target.[sys_last_modified_date] = GETDATE();
