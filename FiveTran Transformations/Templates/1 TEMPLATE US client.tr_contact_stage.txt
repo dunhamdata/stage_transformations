@@ -1,10 +1,10 @@
 /*===========================================================================================================================================
  Procedure:   insert_client contact transformation
- Create date: 2022-06-16
+ Create date: 2022-07-19
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[insert_client].[contact], [Dunham].[geo].[us_postal_codes_to_markets], [Dunham].[geo].[geonames_postal_code_all]
- Return Value(s): [Dunham].[insert_client].[contact_stage]
+ Parameter(s): [insert_upper_client].[insert_schema].[contact], [Dunham].[geo].[us_postal_codes_to_markets], [Dunham].[geo].[geonames_postal_code_all]
+ Return Value(s): [insert_upper_client].[dc].[contact_stage]
  Programming Notes:
 
       **Only rows with a ID will be brought in for analysis
@@ -47,9 +47,9 @@
 
  ==============================================================================================================================================*/
 
-IF OBJECT_ID('Dunham.insert_client.contact_stage') IS NULL
+IF OBJECT_ID('insert_upper_client.dc.contact_stage') IS NULL
 
-CREATE TABLE [insert_client].[contact_stage](
+CREATE TABLE [dc].[contact_stage](
     [pk_constituent_id] [varchar](200) NOT NULL PRIMARY KEY,
     [company_name] [varchar](max) NULL,
     [contact_type] [varchar](max) NULL,
@@ -105,7 +105,7 @@ CREATE TABLE [insert_client].[contact_stage](
 
 /*custom field mappings per client*/
 
-MERGE [Dunham].[insert_client].[contact_stage] WITH (HOLDLOCK) AS target
+MERGE [insert_upper_client].[dc].[contact_stage] WITH (HOLDLOCK) AS target
 USING(
     SELECT DISTINCT
 
@@ -531,7 +531,7 @@ USING(
 
 			UPPER('insert_client') as [client_acronym]
 
-	 FROM [Dunham].[insert_client].[contact] c
+	 FROM [insert_upper_client].[insert_schema].[contact] c
 
    /*joins standardized address information on zip codes*/
 
