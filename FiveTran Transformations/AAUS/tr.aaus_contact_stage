@@ -1,10 +1,10 @@
 /*===========================================================================================================================================
- Procedure:   aaus contact transformation
- Create date: 2022-06-16
+ Procedure:   AAUS contact transformation
+ Create date: 2022-07-19
  Description:  Converts raw data export names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[aaus].[contact], [Dunham].[geo].[sa_3_2016_aust], [Dunham].[geo].[geonames_postal_code_all]
- Return Value(s): [Dunham].[aaus].[contact_stage]
+ Parameter(s): [AAUS].[box].[contact], [Dunham].[geo].[sa_3_2016_aust], [Dunham].[geo].[geonames_postal_code_all]
+ Return Value(s): [AAUS].[dc].[contact_stage]
  Programming Notes:
 
       **Only rows with a ID will be brought in for analysis
@@ -60,9 +60,9 @@
 
  ==============================================================================================================================================*/
 
-IF OBJECT_ID('Dunham.aaus.contact_stage') IS NULL
+IF OBJECT_ID('AAUS.dc.contact_stage') IS NULL
 
-CREATE TABLE [aaus].[contact_stage](
+CREATE TABLE [dc].[contact_stage](
     [pk_constituent_id] [varchar](200) NOT NULL PRIMARY KEY,
     [company_name] [varchar](max) NULL,
     [contact_type] [varchar](max) NULL,
@@ -118,7 +118,7 @@ CREATE TABLE [aaus].[contact_stage](
 
 /*custom field mappings per client*/
 
-MERGE [Dunham].[aaus].[contact_stage] WITH (HOLDLOCK) AS target
+MERGE [AAUS].[dc].[contact_stage] WITH (HOLDLOCK) AS target
 USING(
     SELECT DISTINCT
 
@@ -546,7 +546,7 @@ USING(
 
 			UPPER('aaus') as [client_acronym]
 
-	 FROM [Dunham].[aaus].[contact] c
+	 FROM [AAUS].[box].[contact] c
 
    /*joins standardized address information on zip codes*/
 
