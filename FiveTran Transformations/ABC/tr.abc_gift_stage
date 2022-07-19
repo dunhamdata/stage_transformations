@@ -1,10 +1,10 @@
 /*===========================================================================================================================================
- Procedure:   abc gift transformation
- Create date: 2022-06-06
+ Procedure:   ABC gift transformation
+ Create date: 2022-07-19
  Description:  Converts RAW export data names to standardized contact schema
  Affected table(s):
- Parameter(s): [Dunham].[abc].[gift]
- Return Value(s): [Dunham].[abc].[gift_stage]
+ Parameter(s): [ABC].[aws_lambda].[gift]
+ Return Value(s): [ABC].[dc].[gift_stage]
  Programming Notes:
 
       **Only records with an ID will be processed
@@ -25,9 +25,9 @@
 
 /*if staging table doesn't exist, create it*/
 
- IF OBJECT_ID('Dunham.abc.gift_stage') IS NULL
+ IF OBJECT_ID('ABC.dc.gift_stage') IS NULL
 
-  CREATE TABLE [Dunham].[abc].[gift_stage](
+  CREATE TABLE [ABC].[dc].[gift_stage](
  	[fk_constituent_id] varchar(200) NULL,
  	[pk_gift_id] varchar(200) NOT NULL PRIMARY KEY,
  	[secondary_gift_id] [varchar](100) NULL,
@@ -61,7 +61,7 @@
    [last_modified_date] datetime2 NULL
      ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
 
- MERGE [Dunham].[abc].[gift_stage] WITH (HOLDLOCK) as target
+ MERGE [ABC].[dc].[gift_stage] WITH (HOLDLOCK) as target
  USING(
 
    SELECT DISTINCT
@@ -253,7 +253,7 @@
     ELSE CAST(CONCAT(UPPER('abc'),'_',[contact_id]) as varchar(210))
   END AS [fk_client_constituent_id]
 
-  FROM [Dunham].[abc].[gift]
+  FROM [ABC].[aws_lambda].[gift]
   WHERE [id] is not null) as source
 
   ON (target.[pk_gift_id] = source.[pk_gift_id] collate SQL_Latin1_General_CP1_CI_AS)
